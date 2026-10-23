@@ -22,6 +22,7 @@ CREATE TABLE `user` (
     `id`            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '用户ID',
     `username`      VARCHAR(50)  NOT NULL                COMMENT '用户名',
     `password_hash` VARCHAR(100) NOT NULL                COMMENT '密码哈希(BCrypt)',
+    `role`          VARCHAR(20)  NOT NULL DEFAULT 'user' COMMENT '角色：user=普通用户 admin=管理员',
     `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_username` (`username`)
@@ -56,6 +57,7 @@ CREATE TABLE `post` (
     `favorite_count` INT            NOT NULL DEFAULT 0      COMMENT '收藏数',
     `order_count`    INT            NOT NULL DEFAULT 0      COMMENT '点单数',
     `price`          DECIMAL(8,2)   NULL                    COMMENT '参考单价',
+    `featured`       TINYINT(1)     NOT NULL DEFAULT 0      COMMENT '是否首页今日精选置顶：1=精选 0=否',
     `created_at`     DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发布时间',
     PRIMARY KEY (`id`),
     KEY `idx_category` (`category`),
@@ -106,9 +108,9 @@ CREATE TABLE `food_order` (
 -- 8. 初始数据
 -- ============================================================
 
--- 演示账号：用户名 admin，密码 123456（BCrypt 哈希）
-INSERT INTO `user` (`username`, `password_hash`, `created_at`) VALUES
-('admin', '$2a$10$qXMnYVXnQNYsnrteF1mIgOkur.4mbEYgIEnonL9obQMmXznFeN5He', '2026-09-01 09:00:00');
+-- 演示账号：用户名 admin，密码 123456（BCrypt 哈希），角色 admin（后台管理系统登录账号）
+INSERT INTO `user` (`username`, `password_hash`, `role`, `created_at`) VALUES
+('admin', '$2a$10$qXMnYVXnQNYsnrteF1mIgOkur.4mbEYgIEnonL9obQMmXznFeN5He', 'admin', '2026-09-01 09:00:00');
 
 -- 8.1 分级分类：3 个一级分组 + 8 个二级叶子
 INSERT INTO `category` (`id`, `name`, `parent_id`, `icon`, `sort`, `level`) VALUES

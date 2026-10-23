@@ -24,6 +24,9 @@ public class User {
     /** BCrypt 密码哈希，对应列 password_hash */
     private String passwordHash;
 
+    /** 角色：user=普通用户，admin=管理员（后台管理系统专用） */
+    private String role;
+
     /** 注册时间 */
     private LocalDateTime createdAt;
 }

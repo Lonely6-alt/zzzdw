@@ -23,7 +23,7 @@ onMounted(async () => {
 
 <template>
   <div class="shell">
-    <header v-if="authUser && router.currentRoute.value.name !== 'home'" class="gbar">
+    <header v-if="authUser && !['home','admin','admin-login'].includes(router.currentRoute.value.name)" class="gbar">
       <div class="brand" @click="router.push('/')">🍲 食光 · 美食社区</div>
       <div class="gbar-right">
         <button class="nav" @click="router.push('/')">首页</button>

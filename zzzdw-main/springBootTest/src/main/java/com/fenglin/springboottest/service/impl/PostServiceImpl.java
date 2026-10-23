@@ -240,9 +240,19 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
     }
 
     private List<Post> featured(int n) {
-        return list(new LambdaQueryWrapper<Post>()
-                .orderByDesc(Post::getRating).orderByDesc(Post::getReviewCount)
-                .last("LIMIT " + n));
+        // 优先展示管理员置顶的「今日精选」（featured=1），其余按评分/点评数补足
+        List<Post> pinned = list(new LambdaQueryWrapper<Post>()
+                .eq(Post::getFeatured, 1)
+                .orderByDesc(Post::getRating).orderByDesc(Post::getReviewCount));
+        if (pinned.size() >= n) {
+            return pinned.stream().limit(n).collect(Collectors.toList());
+        }
+        List<Post> rest = list(new LambdaQueryWrapper<Post>()
+                .ne(Post::getFeatured, 1)
+                .orderByDesc(Post::getRating).orderByDesc(Post::getReviewCount));
+        List<Post> combined = new java.util.ArrayList<>(pinned);
+        combined.addAll(rest);
+        return combined.stream().limit(n).collect(Collectors.toList());
     }
 
     private List<Post> latest(int n) {

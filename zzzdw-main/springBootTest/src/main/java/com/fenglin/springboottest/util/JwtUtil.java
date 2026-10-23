@@ -1,6 +1,7 @@
 package com.fenglin.springboottest.util;
 
 import com.fenglin.springboottest.common.BizException;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -43,24 +44,45 @@ public class JwtUtil {
         key = Keys.hmacShaKeyFor(secretBytes);
     }
 
-    /** 为指定用户名签发 token */
+    /** 为指定用户名签发 token（默认角色 user） */
     public String createToken(String username) {
+        return createToken(username, "user");
+    }
+
+    /** 为指定用户名与角色签发 token（role 写入 JWT 声明，供后台管理员鉴权使用） */
+    public String createToken(String username, String role) {
         return Jwts.builder()
                 .subject(username)
+                .claim("role", role)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expireDays * 24 * 60 * 60 * 1000L))
                 .signWith(key)
                 .compact();
     }
 
-    /** 校验 token 并返回用户名；无效或过期抛出 401 业务异常 */
-    public String verify(String token) {
+    /** 解析 token 并返回声明体；无效或过期抛出 401 业务异常 */
+    public Claims parse(String token) {
         try {
             return Jwts.parser().verifyWith(key).build()
-                    .parseSignedClaims(token).getPayload().getSubject();
+                    .parseSignedClaims(token).getPayload();
         } catch (JwtException | IllegalArgumentException e) {
             throw new BizException(401, "未登录或登录已过期");
         }
+    }
+
+    /** 校验 token 并返回用户名；无效或过期抛出 401 业务异常 */
+    public String verify(String token) {
+        return parse(token).getSubject();
+    }
+
+    /** 从请求中提取 Bearer token，为空则抛 401 */
+    private String extract(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        String token = (header != null && header.startsWith("Bearer ")) ? header.substring(7) : "";
+        if (token.isEmpty()) {
+            throw new BizException(401, "未登录或登录已过期");
+        }
+        return token;
     }
 
     /**
@@ -68,11 +90,18 @@ public class JwtUtil {
      * 供需要登录的接口（/api/me、POST /api/posts）调用。
      */
     public String requireUsername(HttpServletRequest request) {
-        String header = request.getHeader("Authorization");
-        String token = (header != null && header.startsWith("Bearer ")) ? header.substring(7) : "";
-        if (token.isEmpty()) {
-            throw new BizException(401, "未登录或登录已过期");
+        return verify(extract(request));
+    }
+
+    /**
+     * 管理员鉴权：校验 token 并确认角色为 admin，否则抛 403。
+     * 供后台管理系统接口（/api/admin/**）调用。
+     */
+    public String requireAdmin(HttpServletRequest request) {
+        Claims claims = parse(extract(request));
+        if (!"admin".equals(claims.get("role", String.class))) {
+            throw new BizException(403, "无权限：需要管理员身份");
         }
-        return verify(token);
+        return claims.getSubject();
     }
 }

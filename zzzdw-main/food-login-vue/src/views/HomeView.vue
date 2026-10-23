@@ -173,6 +173,7 @@ onMounted(async () => {
         <button @click="router.push('/map')">地图</button>
         <button @click="router.push('/ranking')">排名</button>
         <button @click="goProfile">我的</button>
+        <button class="admin" @click="router.push('/admin/login')">🛠 后台管理</button>
       </div>
       <div class="nav-right">
         <span class="nav-user" v-if="authUser">👤 {{ authUser }}</span>
@@ -425,6 +426,11 @@ onMounted(async () => {
 .nav-links button:hover{ color:var(--orange); background:#fff0ea; }
 .nav-links button.on{ background:linear-gradient(120deg,var(--orange),var(--tomato)); color:#fff;
   box-shadow:0 6px 14px rgba(255,90,60,.28); }
+.nav-links button.admin{
+  background:linear-gradient(120deg,#5b6cff,#8a4bff); color:#fff;
+  box-shadow:0 6px 14px rgba(96,80,255,.28);
+}
+.nav-links button.admin:hover{ filter:brightness(1.06); color:#fff; }
 .nav-right{ display:flex; align-items:center; gap:10px; }
 .nav-user{ font-size:13px; color:var(--muted); }
 .nav-out{ border:1.5px solid #ecdfd2; background:#fff; color:var(--muted);
