@@ -10,7 +10,13 @@ import ProfileView from '../views/ProfileView.vue'
 import MapView from '../views/MapView.vue'
 import RankingView from '../views/RankingView.vue'
 import AdminLoginView from '../views/AdminLoginView.vue'
-import AdminDashboard from '../views/AdminDashboard.vue'
+import AdminLayout from '../views/admin/AdminLayout.vue'
+import AdminDashboard from '../views/admin/AdminDashboard.vue'
+import UserManage from '../views/admin/UserManage.vue'
+import NoteReview from '../views/admin/NoteReview.vue'
+import CategoryManage from '../views/admin/CategoryManage.vue'
+import TagManage from '../views/admin/TagManage.vue'
+import CommentManage from '../views/admin/CommentManage.vue'
 
 const routes = [
   { path: '/', name: 'home', component: HomeView, meta: { requiresAuth: true } },
@@ -20,8 +26,21 @@ const routes = [
   { path: '/post/:id', name: 'post', component: PostDetail, meta: { requiresAuth: true } },
   { path: '/map', name: 'map', component: MapView, meta: { requiresAuth: true } },
   { path: '/ranking', name: 'ranking', component: RankingView, meta: { requiresAuth: true } },
+
+  // 后台登录（独立页）
   { path: '/admin/login', name: 'admin-login', component: AdminLoginView },
-  { path: '/admin', name: 'admin', component: AdminDashboard, meta: { requiresAdmin: true } }
+  // 后台管理（需管理员权限）
+  {
+    path: '/admin', component: AdminLayout, meta: { requiresAdmin: true },
+    children: [
+      { path: '', name: 'admin', component: AdminDashboard, meta: { title: '数据仪表盘' } },
+      { path: 'users', name: 'admin-users', component: UserManage, meta: { title: '用户管理' } },
+      { path: 'reviews', name: 'admin-reviews', component: NoteReview, meta: { title: '美食笔记审核' } },
+      { path: 'categories', name: 'admin-categories', component: CategoryManage, meta: { title: '美食分类管理' } },
+      { path: 'tags', name: 'admin-tags', component: TagManage, meta: { title: '热门标签管理' } },
+      { path: 'comments', name: 'admin-comments', component: CommentManage, meta: { title: '评论管理' } }
+    ]
+  }
 ]
 
 const router = createRouter({

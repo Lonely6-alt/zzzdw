@@ -1,19 +1,28 @@
-// 评价（纯前端，localStorage 持久化）。结构：{ [postId]: [{ id, author, rating, comment, at }] }
+// 评价（后端持久化，comments.json）。结构：{ id, postId, author, rating, comment, at }
+// 对外暴露与旧版一致的同步 getter；首次使用时拉取全部评论到内存，之后响应式更新。
 import { ref } from 'vue'
+import { getToken } from './useAuth.js'
 
-const KEY = 'food_reviews'
-let store = {}
-try { store = JSON.parse(localStorage.getItem(KEY) || '{}') } catch { store = {} }
-const reviews = ref(store)
+const API = '/api'
+const comments = ref([])   // 全部评论（含 postId）
+let loaded = false
+let loading = false
 
-function persist() {
-  localStorage.setItem(KEY, JSON.stringify(reviews.value))
+async function ensureLoaded() {
+  if (loaded || loading) return
+  loading = true
+  try {
+    const r = await fetch(`${API}/comments`)
+    if (r.ok) comments.value = await r.json()
+  } catch { /* 网络异常时保持空列表 */ }
+  finally { loaded = true; loading = false }
 }
 
 export function useReviews() {
   // 某帖子的全部评价
   function getReviews(postId) {
-    return reviews.value[postId] || []
+    ensureLoaded()
+    return comments.value.filter(c => c.postId === Number(postId))
   }
   // 某帖子平均评分（0 表示暂无评价）
   function avgRating(postId) {
@@ -24,22 +33,22 @@ export function useReviews() {
   function count(postId) {
     return getReviews(postId).length
   }
-  function add(postId, { author, rating, comment }) {
-    const entry = { id: Date.now(), author, rating, comment, at: Date.now() }
-    reviews.value = {
-      ...reviews.value,
-      [postId]: [entry, ...(reviews.value[postId] || [])]
-    }
-    persist()
-    return entry
+  // 发布评价（需登录）
+  async function add(postId, { author, rating, comment }) {
+    const r = await fetch(`${API}/posts/${postId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify({ author, rating, comment })
+    })
+    const data = await r.json().catch(() => ({}))
+    if (!r.ok) throw new Error(data.message || '发布失败')
+    comments.value = [data, ...comments.value]
+    return data
   }
   // 全部评价（用于首页热门点评 / 排行榜），含 postId 便于跳转
   function allReviews() {
-    const out = []
-    for (const pid in reviews.value) {
-      for (const r of reviews.value[pid]) out.push({ postId: Number(pid), ...r })
-    }
-    return out
+    ensureLoaded()
+    return [...comments.value].sort((a, b) => b.id - a.id)
   }
-  return { reviews, getReviews, avgRating, count, add, allReviews }
+  return { comments, getReviews, avgRating, count, add, allReviews, ensureLoaded }
 }
