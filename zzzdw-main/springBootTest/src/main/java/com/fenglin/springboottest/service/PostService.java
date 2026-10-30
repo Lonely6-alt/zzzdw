@@ -39,6 +39,12 @@ public interface PostService extends IService<Post> {
     /** 某帖子的全部点评（按时间倒序） */
     List<Review> reviews(Long postId);
 
+    /** 全部点评（按 id 倒序，供首页热门点评/排行榜与后台评论管理使用） */
+    List<Review> allReviews();
+
+    /** 重新计算帖子的平均评分与点评数（点评增删后调用） */
+    void refreshPostStats(Long postId);
+
     /** 切换收藏状态，刷新收藏数，返回当前是否已收藏 */
     boolean toggleFavorite(Long postId, Long userId);
 

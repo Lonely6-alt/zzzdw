@@ -27,6 +27,9 @@ public class User {
     /** 角色：user=普通用户，admin=管理员（后台管理系统专用） */
     private String role;
 
+    /** 账号状态：active=正常，disabled=禁用（后台用户管理可切换） */
+    private String status;
+
     /** 注册时间 */
     private LocalDateTime createdAt;
 }

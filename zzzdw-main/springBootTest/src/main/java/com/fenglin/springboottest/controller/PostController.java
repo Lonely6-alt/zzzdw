@@ -44,10 +44,11 @@ public class PostController {
         this.jwtUtil = jwtUtil;
     }
 
-    /** 帖子列表，可按分类筛选：GET /api/posts?category=面食控 */
+    /** 帖子列表（仅展示审核通过的），可按分类筛选：GET /api/posts?category=面食控 */
     @GetMapping("/posts")
     public List<Post> list(@RequestParam(required = false) String category) {
         LambdaQueryWrapper<Post> wrapper = new LambdaQueryWrapper<Post>()
+                .eq(Post::getStatus, "approved")
                 .eq(category != null && !category.isEmpty(), Post::getCategory, category)
                 .orderByDesc(Post::getId);
         return postService.list(wrapper);
@@ -81,6 +82,20 @@ public class PostController {
     @PostMapping("/posts/{id}/reviews")
     @ResponseStatus(HttpStatus.CREATED)
     public Review addReview(@PathVariable Long id, @RequestBody ReviewRequest req, HttpServletRequest request) {
+        String author = jwtUtil.requireUsername(request);
+        return postService.addReview(id, author, req);
+    }
+
+    /** 全部点评列表（首页热门点评/排行榜用）：GET /api/comments，按 id 倒序 */
+    @GetMapping("/comments")
+    public List<Review> allComments() {
+        return postService.allReviews();
+    }
+
+    /** 写点评（兼容前端的 /comments 路径）：POST /api/posts/1/comments，需要登录 */
+    @PostMapping("/posts/{id}/comments")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Review addComment(@PathVariable Long id, @RequestBody ReviewRequest req, HttpServletRequest request) {
         String author = jwtUtil.requireUsername(request);
         return postService.addReview(id, author, req);
     }

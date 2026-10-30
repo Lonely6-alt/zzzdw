@@ -29,21 +29,21 @@ function setUser(u) {
   else localStorage.removeItem('food_user')
 }
 
-// 注册：需携带图片验证码 captchaId + captcha
-export async function apiRegister({ username, password, captchaId, captcha }) {
+// 注册：需携带图片验证码 captchaId + captchaCode
+export async function apiRegister({ username, password, captchaId, captchaCode }) {
   const r = await fetch(`${API}/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password, captchaId, captcha })
+    body: JSON.stringify({ username, password, captchaId, captchaCode })
   })
   const data = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(data.message || '注册失败')
   return data
 }
 
-// 获取图片验证码
+// 获取图片验证码：后端返回 { id, image(base64 dataURL) }
 export async function fetchCaptcha() {
-  const r = await fetch(`${API}/captcha`)
+  const r = await fetch(`${API}/captcha/json`)
   if (!r.ok) throw new Error('获取图片验证码失败')
   return r.json()
 }

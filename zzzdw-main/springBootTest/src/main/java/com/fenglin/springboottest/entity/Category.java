@@ -26,6 +26,9 @@ public class Category {
     /** 分类图标（emoji） */
     private String icon;
 
+    /** 卡片背景（CSS 渐变/颜色），后台分类管理可编辑 */
+    private String bg;
+
     /** 同级排序 */
     private Integer sort;
 

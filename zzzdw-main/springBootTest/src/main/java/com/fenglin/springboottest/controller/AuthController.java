@@ -77,12 +77,19 @@ public class AuthController {
         if (username == null || username.isEmpty() || password == null || password.isEmpty()) {
             throw new BizException(400, "请输入用户名和密码");
         }
-        captchaService.verify(req.captchaId(), req.captchaCode());
+        // 验证码可选：前端带 captchaId 就校验（普通用户登录），不带则跳过（后台管理员登录）
+        if (req.captchaId() != null && !req.captchaId().isBlank()) {
+            captchaService.verify(req.captchaId(), req.captchaCode());
+        }
         User user = userService.findByUsername(username);
         if (user == null || !encoder.matches(password, user.getPasswordHash())) {
             throw new BizException(401, "用户名或密码不正确");
         }
-        return new AuthVO(jwtUtil.createToken(user.getUsername()), UserVO.of(user));
+        if ("disabled".equals(user.getStatus())) {
+            throw new BizException(403, "该账号已被禁用，请联系管理员");
+        }
+        // 角色写入 token，供 /api/admin/** 鉴权使用
+        return new AuthVO(jwtUtil.createToken(user.getUsername(), user.getRole()), UserVO.of(user));
     }
 
     /** 当前登录用户：需要请求头 Authorization: Bearer <token> */

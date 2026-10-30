@@ -1,4 +1,4 @@
-// 评价（后端持久化，comments.json）。结构：{ id, postId, author, rating, comment, at }
+// 评价（后端持久化，MySQL food_db.review 表）。结构：{ id, postId, author, rating, comment, at }
 // 对外暴露与旧版一致的同步 getter；首次使用时拉取全部评论到内存，之后响应式更新。
 import { ref } from 'vue'
 import { getToken } from './useAuth.js'
@@ -8,12 +8,17 @@ const comments = ref([])   // 全部评论（含 postId）
 let loaded = false
 let loading = false
 
+// 后端返回 createdAt(ISO 字符串)，统一映射出毫秒时间戳 at，供排序与日期展示
+function normalize(c) {
+  return { ...c, at: Date.parse(c.createdAt || '') || 0 }
+}
+
 async function ensureLoaded() {
   if (loaded || loading) return
   loading = true
   try {
     const r = await fetch(`${API}/comments`)
-    if (r.ok) comments.value = await r.json()
+    if (r.ok) comments.value = (await r.json()).map(normalize)
   } catch { /* 网络异常时保持空列表 */ }
   finally { loaded = true; loading = false }
 }
@@ -42,8 +47,9 @@ export function useReviews() {
     })
     const data = await r.json().catch(() => ({}))
     if (!r.ok) throw new Error(data.message || '发布失败')
-    comments.value = [data, ...comments.value]
-    return data
+    const normalized = normalize(data)
+    comments.value = [normalized, ...comments.value]
+    return normalized
   }
   // 全部评价（用于首页热门点评 / 排行榜），含 postId 便于跳转
   function allReviews() {

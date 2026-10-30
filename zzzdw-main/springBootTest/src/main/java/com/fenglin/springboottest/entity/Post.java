@@ -58,6 +58,9 @@ public class Post {
     /** 是否首页「今日精选」置顶：1=精选，0=否（管理员后台可开关） */
     private Integer featured;
 
+    /** 审核状态：pending=待审核 approved=通过 rejected=驳回；前台列表仅展示 approved */
+    private String status;
+
     /** 发布时间；序列化为 ISO 格式字符串，前端 new Date() 可直接解析 */
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;

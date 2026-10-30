@@ -85,7 +85,7 @@ async function onReg() {
   if (!ok) return
 
   try {
-    await register({ username, password, captchaId: captchaId.value, captcha: rCaptcha.value.trim() })
+    await register({ username, password, captchaId: captchaId.value, captchaCode: rCaptcha.value.trim() })
     showToast('🎉 注册成功，已自动登录')
     emit('logged-in', username)
   } catch (e) {

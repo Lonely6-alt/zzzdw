@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * 图片验证码接口：GET /api/captcha?id=xxx 直接返回 PNG 图片流。
@@ -40,5 +41,18 @@ public class CaptchaController {
         response.setHeader("Pragma", "no-cache");
         response.setDateHeader("Expires", 0);
         captcha.write(response.getOutputStream());
+    }
+
+    /**
+     * JSON 版验证码：GET /api/captcha/json
+     * 服务端自动生成 captchaId，返回 { "id": "...", "image": "data:image/png;base64,..." }，
+     * 前端直接把 image 放进 <img :src>，提交时带 id + 用户输入即可。
+     */
+    @GetMapping("/captcha/json")
+    public Map<String, String> captchaJson() {
+        String id = java.util.UUID.randomUUID().toString().replace("-", "");
+        AbstractCaptcha captcha = captchaService.create(id);
+        log.info("[captcha] id={}, code={}", id, captcha.getCode());
+        return Map.of("id", id, "image", captcha.getImageBase64Data());
     }
 }

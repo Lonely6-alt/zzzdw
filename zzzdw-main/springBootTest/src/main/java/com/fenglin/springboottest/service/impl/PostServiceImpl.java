@@ -50,6 +50,9 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
     public Page<Post> search(String keyword, Long categoryId, Long parentId, String sort, long page, long size) {
         LambdaQueryWrapper<Post> w = new LambdaQueryWrapper<>();
 
+        // 仅展示审核通过的帖子
+        w.eq(Post::getStatus, "approved");
+
         // 关键词：标题/内容/作者/分类 任意包含即命中
         if (keyword != null && !keyword.trim().isEmpty()) {
             String kw = keyword.trim();
@@ -154,6 +157,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         post.setReviewCount(0);
         post.setFavoriteCount(0);
         post.setOrderCount(0);
+        post.setStatus("pending"); // 新帖需后台审核通过后展示
         post.setCreatedAt(LocalDateTime.now());
         save(post);
         return post;
@@ -183,6 +187,16 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
     public List<Review> reviews(Long postId) {
         return reviewService.list(
                 new LambdaQueryWrapper<Review>().eq(Review::getPostId, postId).orderByDesc(Review::getCreatedAt));
+    }
+
+    @Override
+    public List<Review> allReviews() {
+        return reviewService.list(new LambdaQueryWrapper<Review>().orderByDesc(Review::getId));
+    }
+
+    @Override
+    public void refreshPostStats(Long postId) {
+        recompute(postId);
     }
 
     @Override
@@ -240,15 +254,17 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
     }
 
     private List<Post> featured(int n) {
-        // 优先展示管理员置顶的「今日精选」（featured=1），其余按评分/点评数补足
+        // 优先展示管理员置顶的「今日精选」（featured=1），其余按评分/点评数补足；仅展示审核通过的
         List<Post> pinned = list(new LambdaQueryWrapper<Post>()
                 .eq(Post::getFeatured, 1)
+                .eq(Post::getStatus, "approved")
                 .orderByDesc(Post::getRating).orderByDesc(Post::getReviewCount));
         if (pinned.size() >= n) {
             return pinned.stream().limit(n).collect(Collectors.toList());
         }
         List<Post> rest = list(new LambdaQueryWrapper<Post>()
                 .ne(Post::getFeatured, 1)
+                .eq(Post::getStatus, "approved")
                 .orderByDesc(Post::getRating).orderByDesc(Post::getReviewCount));
         List<Post> combined = new java.util.ArrayList<>(pinned);
         combined.addAll(rest);
@@ -257,6 +273,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
 
     private List<Post> latest(int n) {
         return list(new LambdaQueryWrapper<Post>()
+                .eq(Post::getStatus, "approved")
                 .orderByDesc(Post::getCreatedAt)
                 .last("LIMIT " + n));
     }
