@@ -61,6 +61,9 @@ public class Post {
     /** 审核状态：pending=待审核 approved=通过 rejected=驳回；前台列表仅展示 approved */
     private String status;
 
+    /** 所在商圈（如：三里屯、五道口）；用于前台「商圈」筛选与卡片展示 */
+    private String district;
+
     /** 发布时间；序列化为 ISO 格式字符串，前端 new Date() 可直接解析 */
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;

@@ -12,17 +12,23 @@ const router = useRouter()
 const route = useRoute()
 const { toast } = useToast()
 
-// 后台相关路径不显示前台导航栏
-const showNav = computed(() => authUser.value && !route.path.startsWith('/admin'))
+// 后台相关路径不显示前台导航栏（避免重复导航）
+const showNav = computed(() => !!authUser.value && !route.path.startsWith('/admin'))
 
+// 当前激活的导航项（用 path 前缀匹配，支持 /post 等子页高亮）
+function isActive(p) {
+  if (p === '/') return route.path === '/'
+  return route.path.startsWith(p)
+}
+function go(p) {
+  if (route.path !== p) router.push(p)
+  else window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 function onLogout() {
   logout()
   router.push('/login')
 }
-function goProfile() {
-  router.push('/profile')
-}
-// 后台管理入口：管理员直接进入；普通用户提示无权限
+// 后台管理：仅管理员可见入口；非管理员兜底提示（双保险）
 function onAdmin() {
   if (isAdmin.value) router.push('/admin')
   else toast('您没有管理员权限', 'error')
@@ -36,18 +42,26 @@ onMounted(async () => {
 
 <template>
   <div class="shell">
-    <header v-if="showNav" class="gbar">
-      <div class="brand" @click="router.push('/')">🍲 食光 · 美食社区</div>
-      <div class="gbar-right">
-        <button class="nav" @click="router.push('/')">首页</button>
-        <button class="nav" @click="router.push('/discover')">发现</button>
-        <button class="nav" @click="router.push('/map')">美食地图</button>
-        <button class="nav" @click="router.push('/ranking')">排行榜</button>
-        <button class="nav admin-entry" @click="onAdmin">后台管理</button>
-        <button class="mine" @click="goProfile">我的</button>
-        <button class="out" @click="onLogout">退出登录</button>
+    <header v-if="showNav" class="topnav">
+      <div class="nav-inner">
+        <div class="brand" @click="go('/')">🍲 食光 · 美食社区</div>
+
+        <nav class="links">
+          <button :class="{ on: isActive('/') }" @click="go('/')">首页</button>
+          <button :class="{ on: isActive('/discover') }" @click="go('/discover')">发现</button>
+          <button :class="{ on: isActive('/map') }" @click="go('/map')">美食地图</button>
+          <button :class="{ on: isActive('/ranking') }" @click="go('/ranking')">排行榜</button>
+          <button :class="{ on: isActive('/profile') }" @click="go('/profile')">我的</button>
+          <button v-if="isAdmin" class="admin" @click="onAdmin">🛠 后台管理</button>
+        </nav>
+
+        <div class="right">
+          <span class="user">👤 {{ authUser }}</span>
+          <button class="out" @click="onLogout">退出</button>
+        </div>
       </div>
     </header>
+
     <router-view />
     <OrderModal />
     <ToastHost />
@@ -56,32 +70,42 @@ onMounted(async () => {
 
 <style scoped>
 .shell{ min-height:100vh; }
-.gbar{
-  position:sticky; top:0; z-index:10;
-  display:flex; align-items:center; justify-content:center; gap:22px;
-  padding:14px 24px; background:rgba(255,247,238,.85); backdrop-filter:blur(8px);
-  border-bottom:1px solid #f0e6db;
+.topnav{
+  position:sticky; top:0; z-index:30;
+  background:rgba(255,247,238,.9); backdrop-filter:blur(10px);
+  border-bottom:1.5px solid #f0e6db;
+  box-shadow:0 6px 18px rgba(255,90,60,.06);
 }
-.gbar .brand{ font-weight:800; font-size:17px; cursor:pointer; }
-.gbar .out{
+.nav-inner{
+  max-width:1100px; margin:0 auto; padding:11px 18px;
+  display:flex; align-items:center; gap:14px;
+}
+.brand{ font-weight:800; font-size:17px; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+.links{ display:flex; align-items:center; gap:4px; flex:1; justify-content:center; flex-wrap:wrap; }
+.links button{
+  border:0; background:transparent; color:var(--muted); font-weight:600; font-size:14px;
+  padding:8px 14px; border-radius:999px; cursor:pointer; transition:.2s; white-space:nowrap;
+}
+.links button:hover{ color:var(--orange); background:#fff0ea; }
+.links button.on{ background:linear-gradient(120deg,var(--orange),var(--tomato)); color:#fff;
+  box-shadow:0 6px 14px rgba(255,90,60,.28); }
+.links button.admin{
+  background:linear-gradient(120deg,#5b6cff,#8a4bff); color:#fff;
+  box-shadow:0 6px 14px rgba(96,80,255,.28); margin-left:6px;
+}
+.links button.admin:hover{ filter:brightness(1.06); color:#fff; }
+.right{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.user{ font-size:13px; color:var(--muted); white-space:nowrap; }
+.out{
   border:1.5px solid #ecdfd2; background:#fff; color:var(--muted);
-  padding:7px 14px; border-radius:11px; cursor:pointer; font-weight:600;
+  padding:7px 14px; border-radius:11px; cursor:pointer; font-weight:600; font-size:13px; transition:.2s;
 }
-.gbar .out:hover{ color:var(--err); border-color:var(--err); }
-.gbar-right{ display:flex; align-items:center; gap:10px; }
-.gbar .nav{
-  border:1.5px solid #ecdfd2; background:#fff; color:var(--muted);
-  padding:7px 14px; border-radius:11px; cursor:pointer; font-weight:600; transition:.2s;
+.out:hover{ color:var(--err); border-color:var(--err); }
+
+@media (max-width:680px){
+  .nav-inner{ flex-wrap:wrap; gap:8px; padding:10px 12px; }
+  .brand{ width:100%; }
+  .links{ order:2; justify-content:flex-start; flex-wrap:wrap; }
+  .right{ order:1; margin-left:auto; }
 }
-.gbar .nav:hover{ border-color:var(--orange); color:var(--tomato); }
-.gbar .nav.admin-entry{
-  border:1.5px solid #ffd9b0; color:var(--tomato);
-  background:linear-gradient(120deg,#fff3e6,#ffe6cf);
-}
-.gbar .nav.admin-entry:hover{ border-color:var(--tomato); box-shadow:0 6px 16px rgba(255,90,60,.18); }
-.gbar .mine{
-  border:1.5px solid #ecdfd2; background:#fff; color:var(--muted);
-  padding:7px 14px; border-radius:11px; cursor:pointer; font-weight:600; transition:.2s;
-}
-.gbar .mine:hover{ border-color:var(--orange); color:var(--tomato); }
 </style>

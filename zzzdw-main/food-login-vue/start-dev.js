@@ -43,7 +43,8 @@ run('server', 'mvnw.cmd',
     { cwd: SPRING_DIR }, '36') // 青色
 
 console.log('启动前端 (Vite,   http://localhost:5173) ...')
-run('web', 'npx', ['vite'], {}, '35') // 品红
+// --strictPort：端口被占直接报错，不要偷偷换到 5174，否则浏览器打 5173 会"拒绝连接"
+run('web', 'npx', ['vite', '--port', '5173', '--strictPort'], {}, '35') // 品红
 
 function shutdown() {
   children.forEach((c) => {

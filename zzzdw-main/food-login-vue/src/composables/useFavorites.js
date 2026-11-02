@@ -33,8 +33,13 @@ export function useFavorites() {
       })
       const data = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(data.message || '收藏操作失败')
-      if (data.favorited) ids.value.add(id)
-      else ids.value.delete(id)
+      if (data.favorited) {
+        ids.value.add(id)
+        useToast().toast('已加入收藏 ⭐', 'success')
+      } else {
+        ids.value.delete(id)
+        useToast().toast('已取消收藏', 'info')
+      }
       ids.value = new Set(ids.value) // 触发响应式更新
       return data
     } catch (e) {
