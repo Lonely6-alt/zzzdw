@@ -1,7 +1,7 @@
 /*
  Navicat Premium Dump SQL
 
- Source Server         : localhost_3306
+ Source Server         : test
  Source Server Type    : MySQL
  Source Server Version : 80039 (8.0.39)
  Source Host           : localhost:3306
@@ -11,7 +11,7 @@
  Target Server Version : 80039 (8.0.39)
  File Encoding         : 65001
 
- Date: 02/11/2026 11:51:31
+ Date: 04/11/2026 09:59:27
 */
 
 SET NAMES utf8mb4;
@@ -48,6 +48,57 @@ INSERT INTO `category` VALUES (14, '汉堡炸鸡', 2, '🍔', 'linear-gradient(1
 INSERT INTO `category` VALUES (15, '日料局', 3, '🍣', 'linear-gradient(140deg,#eaf4ff,#c9e2ff)', 1, 2);
 INSERT INTO `category` VALUES (16, '甜品时间', 4, '🍰', 'linear-gradient(140deg,#fff2f9,#ffd4e8)', 1, 2);
 INSERT INTO `category` VALUES (17, '咖啡馆', 4, '☕', 'linear-gradient(140deg,#f4efff,#dbcdff)', 2, 2);
+
+-- ----------------------------
+-- Table structure for chat_message
+-- ----------------------------
+DROP TABLE IF EXISTS `chat_message`;
+CREATE TABLE `chat_message`  (
+  `msg_id` bigint NOT NULL AUTO_INCREMENT COMMENT '消息ID',
+  `session_id` bigint NOT NULL COMMENT '所属会话ID，关联 chat_session.session_id',
+  `sender_id` bigint NOT NULL COMMENT '发送方用户ID',
+  `receiver_id` bigint NOT NULL COMMENT '接收方用户ID',
+  `content` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '消息内容',
+  `send_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发送时间',
+  `is_read` tinyint NOT NULL DEFAULT 0 COMMENT '是否已读：0=未读 1=已读',
+  PRIMARY KEY (`msg_id`) USING BTREE,
+  INDEX `idx_session`(`session_id` ASC, `send_time` ASC) USING BTREE,
+  INDEX `idx_receiver_read`(`receiver_id` ASC, `is_read` ASC) USING BTREE,
+  INDEX `fk_cm_sender`(`sender_id` ASC) USING BTREE,
+  CONSTRAINT `fk_cm_receiver` FOREIGN KEY (`receiver_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_cm_sender` FOREIGN KEY (`sender_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_cm_session` FOREIGN KEY (`session_id`) REFERENCES `chat_session` (`session_id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '私信消息表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of chat_message
+-- ----------------------------
+INSERT INTO `chat_message` VALUES (1, 1, 8, 5, 'Hilo', '2026-11-04 09:50:03', 0);
+
+-- ----------------------------
+-- Table structure for chat_session
+-- ----------------------------
+DROP TABLE IF EXISTS `chat_session`;
+CREATE TABLE `chat_session`  (
+  `session_id` bigint NOT NULL AUTO_INCREMENT COMMENT '会话ID',
+  `user_a_id` bigint NOT NULL COMMENT '会话发起方用户ID（存较小ID，便于唯一约束）',
+  `user_b_id` bigint NOT NULL COMMENT '会话另一方用户ID（存较大ID）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '会话创建时间',
+  `last_msg` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '最后一条消息摘要',
+  `last_time` datetime NULL DEFAULT NULL COMMENT '最后一条消息时间',
+  PRIMARY KEY (`session_id`) USING BTREE,
+  UNIQUE INDEX `uk_a_b`(`user_a_id` ASC, `user_b_id` ASC) USING BTREE,
+  INDEX `idx_user_b`(`user_b_id` ASC) USING BTREE,
+  CONSTRAINT `fk_cs_user_a` FOREIGN KEY (`user_a_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_cs_user_b` FOREIGN KEY (`user_b_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '私信会话表（一对一）' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of chat_session
+-- ----------------------------
+INSERT INTO `chat_session` VALUES (1, 5, 8, '2026-11-04 09:49:54', 'Hilo', '2026-11-04 09:50:03');
+INSERT INTO `chat_session` VALUES (2, 4, 8, '2026-11-04 09:50:10', NULL, NULL);
+INSERT INTO `chat_session` VALUES (3, 4, 5, '2026-11-04 09:50:39', NULL, NULL);
 
 -- ----------------------------
 -- Table structure for favorite
@@ -236,51 +287,5 @@ CREATE TABLE `user`  (
 INSERT INTO `user` VALUES (4, 'admin', '$2a$10$bw2vRfpxf7FPSKoI977KPO4vMRDDHcO/G6OOLxECqQF2yFt4b36se', 'admin', 'active', '2026-11-02 10:49:08');
 INSERT INTO `user` VALUES (5, 'test', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 'active', '2026-11-02 10:49:08');
 INSERT INTO `user` VALUES (8, '哈哈哈', '$2a$10$Hc76SRxcm/xCAyFCkIUelO1x.JkWAaxqpPb3v7O.jz0w9mMUSUn0u', 'user', 'active', '2026-11-02 11:01:13');
-
--- ----------------------------
--- Table structure for chat_session
--- ----------------------------
-DROP TABLE IF EXISTS `chat_session`;
-CREATE TABLE `chat_session`  (
-  `session_id` bigint NOT NULL AUTO_INCREMENT COMMENT '会话ID',
-  `user_a_id` bigint NOT NULL COMMENT '会话发起方用户ID（存较小ID，便于唯一约束）',
-  `user_b_id` bigint NOT NULL COMMENT '会话另一方用户ID（存较大ID）',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '会话创建时间',
-  `last_msg` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '最后一条消息摘要',
-  `last_time` datetime NULL DEFAULT NULL COMMENT '最后一条消息时间',
-  PRIMARY KEY (`session_id`) USING BTREE,
-  UNIQUE INDEX `uk_a_b`(`user_a_id` ASC, `user_b_id` ASC) USING BTREE,
-  INDEX `idx_user_b`(`user_b_id` ASC) USING BTREE,
-  CONSTRAINT `fk_cs_user_a` FOREIGN KEY (`user_a_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT `fk_cs_user_b` FOREIGN KEY (`user_b_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '私信会话表（一对一）' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of chat_session
--- ----------------------------
-
--- ----------------------------
--- Table structure for chat_message
--- ----------------------------
-DROP TABLE IF EXISTS `chat_message`;
-CREATE TABLE `chat_message`  (
-  `msg_id` bigint NOT NULL AUTO_INCREMENT COMMENT '消息ID',
-  `session_id` bigint NOT NULL COMMENT '所属会话ID，关联 chat_session.session_id',
-  `sender_id` bigint NOT NULL COMMENT '发送方用户ID',
-  `receiver_id` bigint NOT NULL COMMENT '接收方用户ID',
-  `content` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '消息内容',
-  `send_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发送时间',
-  `is_read` tinyint NOT NULL DEFAULT 0 COMMENT '是否已读：0=未读 1=已读',
-  PRIMARY KEY (`msg_id`) USING BTREE,
-  INDEX `idx_session`(`session_id` ASC, `send_time` ASC) USING BTREE,
-  INDEX `idx_receiver_read`(`receiver_id` ASC, `is_read` ASC) USING BTREE,
-  CONSTRAINT `fk_cm_session` FOREIGN KEY (`session_id`) REFERENCES `chat_session` (`session_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
-  CONSTRAINT `fk_cm_sender` FOREIGN KEY (`sender_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT `fk_cm_receiver` FOREIGN KEY (`receiver_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '私信消息表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of chat_message
--- ----------------------------
 
 SET FOREIGN_KEY_CHECKS = 1;
