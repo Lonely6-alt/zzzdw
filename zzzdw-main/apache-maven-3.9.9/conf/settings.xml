@@ -52,6 +52,8 @@ under the License.
    | Default: ${user.home}/.m2/repository
   <localRepository>/path/to/local/repo</localRepository>
   -->
+  <!-- 本项目固定使用 D 盘持久仓库：C 盘用户目录可能被开机重置，放 C 盘会每次重新下载全部依赖 -->
+  <localRepository>D:\workSpace\m2-repository</localRepository>
 
   <!-- interactiveMode
    | This will determine whether maven prompts you when it needs input. If set to false,
@@ -145,6 +147,13 @@ under the License.
    | server for that repository.
    |-->
   <mirrors>
+    <!-- 阿里云镜像：中央仓库直连慢，且用户级 ~/.m2/settings.xml 可能随 C 盘被重置，这里固化一份 -->
+    <mirror>
+      <id>aliyunmaven</id>
+      <mirrorOf>central</mirrorOf>
+      <name>Aliyun Maven Mirror</name>
+      <url>https://maven.aliyun.com/repository/public</url>
+    </mirror>
     <!-- mirror
      | Specifies a repository mirror site to use instead of a given repository. The repository that
      | this mirror serves has an ID that matches the mirrorOf element of this mirror. IDs are used

@@ -64,7 +64,7 @@ if not exist "%~dp0food-login-vue\node_modules" (
 REM [3] 启动 Spring Boot 后端（新窗口，端口 8081，数据走 MySQL food_db）
 echo [3/6] 启动 Spring Boot 后端  端口 8081 ...
 pushd "%~dp0springBootTest"
-start "美食-后端8081" cmd /k "set SERVER__PORT= && set SERVER_PORT= && mvnw.cmd spring-boot:run -Dspring-boot.run.jvmArguments=-Dfile.encoding=UTF-8 -Dspring-boot.run.arguments=--server.port=8081"
+start "美食-后端8081" cmd /k "set SERVER__PORT= && set SERVER_PORT= && set JAVA_HOME= && %~dp0apache-maven-3.9.9\bin\mvn.cmd -Dmaven.repo.local=D:\workSpace\m2-repository -o spring-boot:run -Dspring-boot.run.jvmArguments=-Dfile.encoding=UTF-8 -Dspring-boot.run.arguments=--server.port=8081"
 popd
 
 REM [4] 启动 Vue 前端（新窗口，端口锁定 5173，/api 代理到 8081）
@@ -89,9 +89,9 @@ for /l %%i in (1,1,90) do (
 echo.
 
 REM [6] 等后端 8081 起来（否则页面能开但登录/帖子接口 500）
-echo [6/6] 等待后端 8081 端口就绪（最多 120 秒）...
+echo [6/6] 等待后端 8081 端口就绪（最多 600 秒，若在补下载 Maven 依赖会较慢）...
 set "API_OK=0"
-for /l %%i in (1,1,120) do (
+for /l %%i in (1,1,600) do (
     if "!API_OK!"=="0" (
         netstat -ano | findstr "LISTENING" | findstr ":8081 " >nul 2>nul && set "API_OK=1"
         if "!API_OK!"=="0" (
@@ -114,7 +114,7 @@ if "!WEB_OK!"=="1" (
 if "!API_OK!"=="1" (
     echo   后端接口:     http://localhost:8081  已就绪
 ) else (
-    echo   [警告] 后端 8081 未就绪！页面能打开但登录/帖子会失败，请看 "美食-后端8081" 窗口
+    echo   [警告] 后端 8081 在 600 秒内未就绪！请看 "美食-后端8081" 窗口里的红色报错并截图反馈
 )
 echo   数据库:       MySQL food_db ^(localhost:3306^)
 echo   关闭项目请双击  停止项目.bat

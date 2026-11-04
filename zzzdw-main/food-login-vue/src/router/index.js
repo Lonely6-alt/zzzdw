@@ -9,6 +9,7 @@ import PostDetail from '../views/PostDetail.vue'
 import ProfileView from '../views/ProfileView.vue'
 import MapView from '../views/MapView.vue'
 import RankingView from '../views/RankingView.vue'
+import ChatView from '../views/ChatView.vue'
 import AdminLoginView from '../views/AdminLoginView.vue'
 import AdminLayout from '../views/admin/AdminLayout.vue'
 import AdminDashboard from '../views/admin/AdminDashboard.vue'
@@ -26,6 +27,7 @@ const routes = [
   { path: '/post/:id', name: 'post', component: PostDetail, meta: { requiresAuth: true } },
   { path: '/map', name: 'map', component: MapView, meta: { requiresAuth: true } },
   { path: '/ranking', name: 'ranking', component: RankingView, meta: { requiresAuth: true } },
+  { path: '/chat', name: 'chat', component: ChatView, meta: { requiresAuth: true } },
 
   // 后台登录（独立页）
   { path: '/admin/login', name: 'admin-login', component: AdminLoginView },

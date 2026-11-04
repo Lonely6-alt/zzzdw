@@ -3,13 +3,14 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFavorites } from '../composables/useFavorites.js'
 import { useReviews } from '../composables/useReviews.js'
+import { catIcon, catBg } from '../data/categories.js'
 
 const router = useRouter()
 const { ids: favIds } = useFavorites()
 const { avgRating, count: reviewCount } = useReviews()
 
 const posts = ref([])
-const tab = ref('hot') // hot | rating | author
+const tab = ref('hot') // hot | rating | news
 const loading = ref(false)
 
 async function loadPosts() {
@@ -40,21 +41,23 @@ const ratingList = computed(() =>
     .slice(0, 8)
 )
 
-// 食客榜：按作者聚合发帖数 + 帖子均分
-const authorList = computed(() => {
-  const map = {}
-  for (const p of posts.value) {
-    const a = p.author || '匿名'
-    if (!map[a]) map[a] = { author: a, posts: 0, sum: 0, cnt: 0 }
-    map[a].posts++
-    const av = avgRating(p.id)
-    if (av) { map[a].sum += av; map[a].cnt++ }
-  }
-  return Object.values(map)
-    .map(m => ({ ...m, avg: m.cnt ? m.sum / m.cnt : 0 }))
-    .sort((x, y) => y.posts - x.posts || y.avg - x.avg)
+// 新店榜：按发布时间倒序（社区种草，越新越靠前）
+const newList = computed(() =>
+  [...posts.value]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt) || b.id - a.id)
     .slice(0, 8)
-})
+)
+
+function fromNow(t) {
+  const diff = Date.now() - new Date(t).getTime()
+  if (!Number.isFinite(diff)) return ''
+  const day = Math.floor(diff / 86400000)
+  if (day >= 30) return `${Math.floor(day / 30)} 个月前`
+  if (day >= 1) return `${day} 天前`
+  const hour = Math.floor(diff / 3600000)
+  if (hour >= 1) return `${hour} 小时前`
+  return '刚刚'
+}
 
 function openPost(id) { router.push(`/post/${id}`) }
 function goProfile() { router.push('/profile') }
@@ -90,9 +93,9 @@ onMounted(loadPosts)
     </header>
 
     <nav class="tabs">
-      <button :class="{ on: tab === 'hot' }" @click="tab = 'hot'">🔥 人气榜</button>
+      <button :class="{ on: tab === 'hot' }" @click="tab = 'hot'">🔥 热榜</button>
       <button :class="{ on: tab === 'rating' }" @click="tab = 'rating'">⭐ 好评榜</button>
-      <button :class="{ on: tab === 'author' }" @click="tab = 'author'">🍴 食客榜</button>
+      <button :class="{ on: tab === 'news' }" @click="tab = 'news'">🆕 新店榜</button>
     </nav>
 
     <p v-if="loading" class="loader-wrap"><span class="spinner"></span></p>
@@ -131,20 +134,21 @@ onMounted(loadPosts)
       <li v-if="!ratingList.length" class="rempty">还没有评价，去帖子下抢沙发打个分吧～</li>
     </ul>
 
-    <!-- 食客榜 -->
+    <!-- 新店榜 -->
     <ul v-else class="rlist">
-      <li v-for="(m, i) in authorList" :key="m.author" class="ritem author">
+      <li v-for="(p, i) in newList" :key="p.id" class="ritem" @click="openPost(p.id)">
         <span class="rank">{{ medal(i) }}</span>
-        <span class="r-emoji">🧑‍🍳</span>
+        <span class="r-emoji" :style="{ background: catBg(p.category) }">{{ catIcon(p.category) }}</span>
         <div class="r-body">
-          <div class="r-title">@{{ m.author }}</div>
-          <div class="r-sub">发布 {{ m.posts }} 篇 · 均分 {{ m.avg.toFixed(1) }}</div>
+          <div class="r-title">{{ p.title }}<em class="r-new">新店</em></div>
+          <div class="r-sub">@{{ p.author }} · {{ p.category }}</div>
         </div>
         <div class="r-metric">
-          <span class="r-heat">📝 {{ m.posts }}</span>
+          <span class="r-stars">{{ starStr(avgRating(p.id) || 0) }}</span>
+          <span class="r-avg">{{ avgRating(p.id) ? avgRating(p.id).toFixed(1) : '暂无' }}</span>
         </div>
       </li>
-      <li v-if="!authorList.length" class="rempty">还没有食客数据～</li>
+      <li v-if="!newList.length" class="rempty">还没有新店数据～</li>
     </ul>
   </div>
 </template>
@@ -190,7 +194,9 @@ onMounted(loadPosts)
 .rank{ font-size:22px; width:34px; text-align:center; font-weight:800; }
 .r-emoji{ font-size:30px; }
 .r-body{ flex:1; min-width:0; }
-.r-title{ font-size:16px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.r-title{ font-size:16px; font-weight:700; display:flex; align-items:center; gap:7px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.r-new{ font-style:normal; font-size:10.5px; font-weight:800; color:#fff; background:linear-gradient(120deg,#3aa0ff,#2e7fd6);
+  padding:1px 7px; border-radius:999px; flex-shrink:0; }
 .r-sub{ font-size:12.5px; color:var(--muted); margin-top:3px; }
 .r-metric{ text-align:right; display:flex; flex-direction:column; gap:3px; }
 .r-heat{ font-size:15px; font-weight:800; color:var(--tomato); }

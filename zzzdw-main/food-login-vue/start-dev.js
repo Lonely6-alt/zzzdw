@@ -7,6 +7,10 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const SPRING_DIR = path.resolve(__dirname, '../springBootTest')
+// 用项目自带的 D 盘 Maven（C 盘的 ~/.m2 每次开机会被重置/不完整，导致每次重新下载依赖、后端迟迟起不来）
+const MVN = path.resolve(__dirname, '../apache-maven-3.9.9/bin/mvn.cmd')
+// Maven 本地仓库固定放 D 盘（持久），依赖只下载一次
+const REPOArgs = ['-Dmaven.repo.local=D:\\workSpace\\m2-repository', '-o']
 
 const children = []
 
@@ -36,8 +40,8 @@ function run(name, command, args, options, color) {
 console.log('启动后端 (Spring Boot, http://localhost:8081, 数据库 MySQL food_db) ...')
 // Windows 下用 mvnw.cmd；其他平台可改用 ./mvnw
 // 命令行显式指定 8081，防止配置文件被意外覆盖导致端口漂移；-Dfile.encoding 修正中文日志乱码
-run('server', 'mvnw.cmd',
-    ['spring-boot:run', '-DskipTests',
+run('server', MVN,
+    [...REPOArgs, 'spring-boot:run', '-DskipTests',
      '-Dspring-boot.run.jvmArguments=-Dfile.encoding=UTF-8',
      '-Dspring-boot.run.arguments=--server.port=8081'],
     { cwd: SPRING_DIR }, '36') // 青色

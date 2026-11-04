@@ -38,7 +38,8 @@
 - **D:\workSpace\springBootTest 是旧版**（桌面曾有 `springBootTest.lnk` 指向它）：只有 Hello World，无数据库/JWT/验证码。除非用户明确要求，**不要启动它**。
 - **后端 CaptchaController 会打印验证码答案到日志**（联调用），生产环境应删除。
 - 本机杀 Windows 进程（Git Bash 里）：`MSYS2_ARG_CONV_EXCL="*" taskkill /F /PID <pid>`；wmic 被安全策略禁用；cmd.exe 在 WorkBuddy 沙箱里被拦截，bat 只能由用户双击运行。
-- **Maven 启动后端**：本机 Maven 发行包在 Git Bash 下直接跑 `./mvnw`（shell 脚本）会报 `找不到或无法加载主类 org.codehaus.plexus.classworlds.launcher.Launcher`（classworlds 加载失败，是 shell 脚本在 Git Bash 下的已知坑）。**正确做法**：用 `mvnw.cmd`（Windows 批处理启动器），或指向缓存里的完整 Maven：`C:\Users\Administrator\.m2\wrapper\dists\apache-maven-3.9.9-bin\*\apache-maven-3.9.9\bin\mvn.cmd`。`启动项目.bat` 用的就是 `mvnw.cmd`，双击即可，不要在 Git Bash 里手敲 `./mvnw`。
+- **Maven 启动后端**：本机 Maven 发行包在 Git Bash 下直接跑 `./mvnw`（shell 脚本）会报 `找不到或无法加载主类 org.codehaus.plexus.classworlds.launcher.Launcher`（classworlds 加载失败，是 shell 脚本在 Git Bash 下的已知坑）。**正确做法**：用 `mvnw.cmd`（Windows 批处理启动器），或指向缓存里的完整 Maven：`C:\Users\Administrator\.m2\wrapper\dists\apache-maven-3.9.9\*\apache-maven-3.9.9\bin\mvn.cmd`。`启动项目.bat` 用的就是 `mvnw.cmd`，双击即可，不要在 Git Bash 里手敲 `./mvnw`。
+- **后端 8081 迟迟起不来 / 启动脚本等待超时（2026-11-04 已根治）**：根因是 Maven 依赖每次开机都重新下载——① 项目自带的 `apache-maven-3.9.9\boot\` 缺 `plexus-classworlds-2.8.0.jar` 等 89 个文件（只剩 license），Maven 本体跑不起来；② C 盘 `~/.m2/repository` 依赖残缺（大量 jar 丢失只剩 pom），且 C 盘用户目录可能随开机重置。**修复（不要再改回去）**：本地仓库固定在 `D:\workSpace\m2-repository`（已用 dependency:go-offline 预热完整）；`启动项目.bat` / `start-dev.js` 后端改用项目自带 `apache-maven-3.9.9\bin\mvn.cmd` + `-Dmaven.repo.local=D:\workSpace\m2-repository -o`（离线模式，启动不再联网下载）；自带 Maven 的 `conf\settings.xml` 已固化 D 盘仓库 + 阿里云镜像。若确需新增依赖：先去掉 `-o` 跑一次让它下载进 D 盘仓库，再补回 `-o`。
 
 ## 数据库
 
@@ -72,3 +73,9 @@
   - 后端配合：给 `Post` 实体与 `post` 表新增 `district`(商圈) 字段（ALERT 加列 + 12 条演示数据回填商圈 + `food_db.sql` 完整 dump 同步）。前端 `postDistrict()` 对缺失 district 有按 id 派生兜底。
   - 验证：生产构建零错误；`/api/posts` 返回 50 条且均含 district；登录 admin 取 token → `/api/me` 200。
 - 2026-11-02（中午）：美食帖子由 12 条扩充到 50 条。用 `springBootTest/sql/gen_posts.py` 生成 38 条真实风格中文美食帖（覆盖 8 个叶子分类与 8 个商圈，rating/收藏数/点单数/人均/日期按规律生成），插入 live DB `food_db.post`，并重跑 `mysqldump` 把 `food_db.sql` 同步为含 50 条数据的完整 dump（已验证可重导临时库得到 50 条）。前端 `stats.posts` 由 `posts.length` 驱动，首页「平台数据概览」自动显示 50 篇美食笔记，分页每页 6 条共 9 页。
+- 2026-11-04：根治"启动脚本等后端 8081 超时、Maven 反复下载依赖"问题：
+  1. 发现项目自带 `apache-maven-3.9.9` 残缺（boot 目录缺 classworlds jar 等 89 个文件），从 `~/.m2/wrapper/dists` 的完整发行版 robocopy 补齐（保留已改的 conf\settings.xml）。
+  2. 新建 D 盘持久仓库 `D:\workSpace\m2-repository`（旧 C 盘仓库 758MB robocopy 迁入 + `dependency:go-offline` 预热 + 离线 compile 验证通过）。
+  3. `启动项目.bat`（GBK）后端命令改为自带 mvn.cmd + `-Dmaven.repo.local=D:\workSpace\m2-repository -o`；等待 8081 由 120 秒放宽到 600 秒。`food-login-vue\start-dev.js` 同步修改。
+  4. 自带 Maven `conf\settings.xml` 与 C 盘 `~/.m2/settings.xml` 均固化 D 盘仓库；conf 里另加阿里云镜像。
+  5. 实测：离线 `spring-boot:run` 约 5 秒绑定 8081，`/api/posts` 返回 200。
