@@ -4,12 +4,17 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fenglin.springboottest.common.BizException;
 import com.fenglin.springboottest.entity.ChatMessage;
+import com.fenglin.springboottest.entity.ChatGroupMember;
+import com.fenglin.springboottest.entity.ChatGroupMessage;
 import com.fenglin.springboottest.entity.ChatSession;
 import com.fenglin.springboottest.entity.User;
+import com.fenglin.springboottest.mapper.ChatGroupMemberMapper;
+import com.fenglin.springboottest.mapper.ChatGroupMessageMapper;
 import com.fenglin.springboottest.mapper.ChatMessageMapper;
 import com.fenglin.springboottest.mapper.ChatSessionMapper;
 import com.fenglin.springboottest.service.UserService;
 import com.fenglin.springboottest.util.JwtUtil;
+import com.fenglin.springboottest.ws.ChatWsHandler;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,15 +45,22 @@ public class ChatController {
 
     private final ChatSessionMapper sessionMapper;
     private final ChatMessageMapper messageMapper;
+    private final ChatGroupMemberMapper groupMemberMapper;
+    private final ChatGroupMessageMapper groupMessageMapper;
     private final UserService userService;
     private final JwtUtil jwtUtil;
+    private final ChatWsHandler ws;
 
     public ChatController(ChatSessionMapper sessionMapper, ChatMessageMapper messageMapper,
-                          UserService userService, JwtUtil jwtUtil) {
+                          ChatGroupMemberMapper groupMemberMapper, ChatGroupMessageMapper groupMessageMapper,
+                          UserService userService, JwtUtil jwtUtil, ChatWsHandler ws) {
         this.sessionMapper = sessionMapper;
         this.messageMapper = messageMapper;
+        this.groupMemberMapper = groupMemberMapper;
+        this.groupMessageMapper = groupMessageMapper;
         this.userService = userService;
         this.jwtUtil = jwtUtil;
+        this.ws = ws;
     }
 
     /** 当前登录用户 */
@@ -78,15 +90,31 @@ public class ChatController {
         return userId.equals(s.getUserAId()) ? s.getUserBId() : s.getUserAId();
     }
 
-    /** 未读总数：GET /api/chat/unread */
+    /** 未读总数（私聊 + 群聊）：GET /api/chat/unread */
     @GetMapping("/unread")
     public Map<String, Object> unread(HttpServletRequest request) {
         Long uid = currentUser(request).getId();
         Long cnt = messageMapper.selectCount(new LambdaQueryWrapper<ChatMessage>()
                 .eq(ChatMessage::getReceiverId, uid)
                 .eq(ChatMessage::getIsRead, 0));
+        long privateUnread = cnt == null ? 0 : cnt;
+
+        // 群聊未读：群内消息 ID 大于我的已读位，且不是自己发的
+        long groupUnread = 0;
+        List<ChatGroupMember> groups = groupMemberMapper.selectList(
+                new LambdaQueryWrapper<ChatGroupMember>().eq(ChatGroupMember::getUserId, uid));
+        for (ChatGroupMember m : groups) {
+            Long c = groupMessageMapper.selectCount(new LambdaQueryWrapper<ChatGroupMessage>()
+                    .eq(ChatGroupMessage::getGroupId, m.getGroupId())
+                    .gt(ChatGroupMessage::getMsgId, m.getLastReadMsgId() == null ? 0L : m.getLastReadMsgId())
+                    .ne(ChatGroupMessage::getSenderId, uid));
+            groupUnread += (c == null ? 0 : c);
+        }
+
         Map<String, Object> res = new HashMap<>();
-        res.put("unread", cnt == null ? 0 : cnt);
+        res.put("unread", privateUnread + groupUnread);
+        res.put("privateUnread", privateUnread);
+        res.put("groupUnread", groupUnread);
         return res;
     }
 
@@ -201,6 +229,23 @@ public class ChatController {
         s.setLastMsg(content);
         s.setLastTime(msg.getSendTime());
         sessionMapper.updateById(s);
+
+        // 实时推送：对方（在线即收到）+ 自己（多端同步）
+        Map<String, Object> msgVo = new HashMap<>();
+        msgVo.put("msgId", msg.getMsgId());
+        msgVo.put("sessionId", id);
+        msgVo.put("senderId", uid);
+        msgVo.put("receiverId", pid);
+        msgVo.put("content", content);
+        msgVo.put("sendTime", msg.getSendTime()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")));
+        msgVo.put("isRead", 0);
+        Map<String, Object> event = new HashMap<>();
+        event.put("type", "private");
+        event.put("sessionId", id);
+        event.put("senderName", me.getUsername());
+        event.put("msg", msgVo);
+        ws.push(java.util.Arrays.asList(uid, pid), event);
         return msg;
     }
 }

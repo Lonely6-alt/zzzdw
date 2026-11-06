@@ -84,6 +84,7 @@ function starStr(n) {
 
       <h1>{{ post.title }}</h1>
       <div class="meta">
+        <span v-if="post.shopName" class="shop-chip">🏠 {{ post.shopName }}</span>
         <span class="author" @click="goProfile">@{{ post.author }}</span>
         · {{ new Date(post.createdAt).toLocaleDateString() }}
       </div>
@@ -191,6 +192,8 @@ function starStr(n) {
 .post h1{ font-size:27px; margin-bottom:10px; line-height:1.3; }
 .meta{ color:#bba; font-size:13px; margin-bottom:22px; }
 .meta .author{ color:var(--tomato); cursor:pointer; font-weight:600; }
+.meta .shop-chip{ display:inline-block; background:#fff2e8; color:#b4652f; border:1px solid #ffd9bf;
+  border-radius:999px; padding:2px 10px; margin-right:8px; font-size:12.5px; font-weight:700; }
 .meta .author:hover{ text-decoration:underline; }
 .content{ font-size:16px; line-height:1.85; color:#4a3d33; white-space:pre-wrap; }
 </style>

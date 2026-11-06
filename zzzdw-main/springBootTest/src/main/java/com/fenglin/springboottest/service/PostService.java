@@ -50,4 +50,10 @@ public interface PostService extends IService<Post> {
 
     /** 某用户的收藏帖子列表（按收藏时间倒序） */
     List<Post> favorites(Long userId);
+
+    /**
+     * 批量回填店铺信息（shopName / shopEmoji / shopOwner）。
+     * 店铺名实时读自 shop 表，因此店家改名后菜品卡片会同步显示新名字。
+     */
+    void enrichPosts(List<Post> posts);
 }

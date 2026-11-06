@@ -11,6 +11,12 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8081',
         changeOrigin: true
+      },
+      // 聊天 WebSocket（私信 / 群聊实时消息）
+      '/ws': {
+        target: 'ws://localhost:8081',
+        ws: true,
+        changeOrigin: true
       }
     }
   }

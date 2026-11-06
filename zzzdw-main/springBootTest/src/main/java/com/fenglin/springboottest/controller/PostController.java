@@ -51,7 +51,9 @@ public class PostController {
                 .eq(Post::getStatus, "approved")
                 .eq(category != null && !category.isEmpty(), Post::getCategory, category)
                 .orderByDesc(Post::getId);
-        return postService.list(wrapper);
+        List<Post> list = postService.list(wrapper);
+        postService.enrichPosts(list);
+        return list;
     }
 
     /** 帖子详情：GET /api/posts/1，不存在返回 404 */
@@ -61,6 +63,7 @@ public class PostController {
         if (post == null) {
             throw new BizException(404, "帖子不存在");
         }
+        postService.enrichPosts(java.util.Collections.singletonList(post));
         return post;
     }
 
@@ -124,6 +127,8 @@ public class PostController {
         if (user == null) {
             throw new BizException(404, "用户不存在");
         }
-        return postService.favorites(user.getId());
+        List<Post> list = postService.favorites(user.getId());
+        postService.enrichPosts(list);
+        return list;
     }
 }

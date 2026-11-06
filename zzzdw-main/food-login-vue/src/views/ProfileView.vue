@@ -56,6 +56,7 @@ onMounted(load)
         <div class="stat"><b>{{ mine.length }}</b><span>我的发布</span></div>
         <div class="stat"><b>{{ favList.length }}</b><span>我的收藏</span></div>
       </div>
+      <button class="shop-entry" @click="router.push('/shop')">🏠 我的店铺</button>
     </section>
 
     <!-- 分段切换 -->
@@ -127,6 +128,10 @@ onMounted(load)
 .stat{ text-align:center; }
 .stat b{ display:block; font-size:22px; font-weight:800; }
 .stat span{ font-size:12px; opacity:.9; }
+.shop-entry{ position:relative; z-index:2; border:1.5px solid rgba(255,255,255,.55); background:rgba(255,255,255,.18);
+  color:#fff; border-radius:999px; padding:9px 18px; font-size:13.5px; font-weight:700; cursor:pointer;
+  font-family:inherit; transition:.2s; white-space:nowrap; }
+.shop-entry:hover{ background:#fff; color:var(--tomato); }
 
 /* 分段切换 */
 .tabs{ position:relative; z-index:2; display:flex; gap:8px; margin:22px 0 18px; }

@@ -1,6 +1,7 @@
 package com.fenglin.springboottest.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -33,6 +34,21 @@ public class Post {
 
     /** 作者用户名 */
     private String author;
+
+    /** 所属店铺 ID，关联 shop.shop_id；店铺名由 shop 表关联读取，改名后自动同步 */
+    private Long shopId;
+
+    /** 店铺名称（非数据库字段，查询后由 ShopMapper 回填，供卡片直接展示） */
+    @TableField(exist = false)
+    private String shopName;
+
+    /** 店铺图标（非数据库字段，查询后回填） */
+    @TableField(exist = false)
+    private String shopEmoji;
+
+    /** 店主用户名（非数据库字段，点击店铺名发起私信用） */
+    @TableField(exist = false)
+    private String shopOwner;
 
     /** 封面表情图标 */
     private String emoji;

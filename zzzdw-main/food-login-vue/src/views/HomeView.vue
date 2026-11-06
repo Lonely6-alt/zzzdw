@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { authUser, logout } from '../composables/useAuth.js'
 import { useReviews } from '../composables/useReviews.js'
@@ -22,8 +22,9 @@ const activeCat = ref('全部')
 const keyword = ref('')
 const liked = ref(new Set())
 
-// 无限滚动：当前展示条数
-const visibleCount = ref(6)
+// 分页：每页 12 道，点击页码 / 上一页 / 下一页切换（不依赖滚动加载）
+const PAGE_SIZE = 12
+const page = ref(1)
 
 // 商圈兜底：后端未返回 district 时按 id 派生
 const DISTRICT_FB = { 1:'老城区',2:'大学城',3:'万象城',4:'三里屯',5:'科技园',6:'五道口',7:'大学城',8:'三里屯',9:'南锣鼓巷',10:'五道口',11:'滨江道',12:'老城区' }
@@ -40,9 +41,9 @@ const HERO_ICONS = [
   { e: '🍢', x: 84, y: 66, s: 38, r: 12 }, { e: '🍲', x: 40, y: 12, s: 40, r: 4 }
 ]
 
-// 店铺名 / 距离 等缺失字段在前端确定性合成（后端 Post 无这些字段，仅用于展示）
+// 店铺名：优先用后端 shop 表返回的真实店铺名（店家改名后自动同步），缺失时用历史兜底
 const SHOP_POOL = ['巷口小馆', '老地方食堂', '街角食光', '私房一味', '深夜食堂', '暖食屋', '半日闲', '食光小铺', '鲜物记', '好味来', '慢炖锅', '一味居']
-function shopName(p) { return SHOP_POOL[(Number(p.id) || 1) % SHOP_POOL.length] }
+function shopName(p) { return p.shopName || SHOP_POOL[(Number(p.id) || 1) % SHOP_POOL.length] }
 function distance(p) { return (0.4 + ((Number(p.id) * 37) % 95) / 10).toFixed(1) }
 function isNew(p) {
   const t = new Date(p.createdAt).getTime()
@@ -61,6 +62,7 @@ const filtered = computed(() => {
       (p.title || '').toLowerCase().includes(kw) ||
       (p.content || '').toLowerCase().includes(kw) ||
       (p.author || '').toLowerCase().includes(kw) ||
+      (p.shopName || '').toLowerCase().includes(kw) ||
       (p.category || '').toLowerCase().includes(kw)
     )
   })
@@ -75,10 +77,45 @@ const filtered = computed(() => {
   return arr
 })
 
-// 无限滚动：只展示前 visibleCount 条
-const pagedPosts = computed(() => filtered.value.slice(0, visibleCount.value))
-const hasMore = computed(() => visibleCount.value < filtered.value.length)
-watch([keyword, activeCat], () => { visibleCount.value = 6 })
+// 分页切片：当前页 12 条
+const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / PAGE_SIZE)))
+const pagedPosts = computed(() => {
+  const start = (page.value - 1) * PAGE_SIZE
+  return filtered.value.slice(start, start + PAGE_SIZE)
+})
+
+// 页码列表：页数多时折叠为 1 … 4 5 6 … 20
+const pageList = computed(() => {
+  const tp = totalPages.value
+  const cur = page.value
+  const out = []
+  if (tp <= 7) {
+    for (let i = 1; i <= tp; i++) out.push(i)
+    return out
+  }
+  out.push(1)
+  const from = Math.max(2, cur - 1)
+  const to = Math.min(tp - 1, cur + 1)
+  if (from > 2) out.push('...')
+  for (let i = from; i <= to; i++) out.push(i)
+  if (to < tp - 1) out.push('...')
+  out.push(tp)
+  return out
+})
+
+// 搜索 / 分类 / 排序变化时回到第 1 页
+watch([keyword, activeCat, sortBy], () => { page.value = 1 })
+
+// 翻页：切页后平滑滚回列表顶部
+function goPage(n) {
+  const p = Math.min(Math.max(1, n), totalPages.value)
+  if (p === page.value) return
+  page.value = p
+  nextTick(() => {
+    const el = document.querySelector('.result-line') || document.querySelector('.grid')
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 96, behavior: 'smooth' })
+  })
+}
 
 function pickHot(w) { keyword.value = keyword.value === w ? '' : w }
 function clearCat() { activeCat.value = '全部' }
@@ -175,19 +212,11 @@ function starStr(n) {
 }
 const firstChar = s => (s || '?').trim().charAt(0).toUpperCase()
 
-// 无限滚动监听
-function onScroll() {
-  if (loading.value || !hasMore.value) return
-  const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 700
-  if (nearBottom) visibleCount.value += 6
-}
 onMounted(async () => {
   await loadPosts()
   const c = route.query.cat
   if (typeof c === 'string' && CAT_NAMES.includes(c)) activeCat.value = c
-  window.addEventListener('scroll', onScroll, { passive: true })
 })
-onUnmounted(() => window.removeEventListener('scroll', onScroll))
 </script>
 
 <template>
@@ -301,7 +330,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
               <b>{{ avgRating(p.id) ? avgRating(p.id).toFixed(1) : '暂无' }}</b>
             </span>
             <span class="dot">·</span>
-            <span class="shop">🏠 {{ shopName(p) }}</span>
+            <span class="shop" :title="p.shopOwner ? `私信店铺 @${p.shopOwner}` : '店铺'" @click.stop="openChat(p.shopOwner || p.author)">🏠 {{ shopName(p) }}</span>
             <span class="dist">📍 {{ postDistrict(p) }} {{ distance(p) }}km</span>
           </div>
 
@@ -323,11 +352,18 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
       </article>
     </div>
 
-    <!-- 无限滚动加载提示 -->
-    <div v-if="!loading && hasMore" class="loadmore">
-      <span class="loader"></span> 下滑加载更多…
-    </div>
-    <div v-else-if="!loading && filtered.length && visibleCount >= filtered.length" class="loadend">— 已经到底啦 —</div>
+    <!-- 分页：上一页 / 页码 / 下一页 -->
+    <nav v-if="!loading && filtered.length" class="pager" aria-label="分页导航">
+      <button class="pg-btn" type="button" :disabled="page === 1" @click="goPage(page - 1)">← 上一页</button>
+      <div class="pg-nums">
+        <template v-for="(it, i) in pageList" :key="'pg' + i">
+          <span v-if="it === '...'" class="pg-dots">…</span>
+          <button v-else class="pg-num" type="button" :class="{ on: it === page }" @click="goPage(it)">{{ it }}</button>
+        </template>
+      </div>
+      <button class="pg-btn" type="button" :disabled="page === totalPages" @click="goPage(page + 1)">下一页 →</button>
+      <span class="pg-info">第 {{ page }} / {{ totalPages }} 页 · 共 {{ filtered.length }} 道</span>
+    </nav>
 
     <!-- 今日精选 -->
     <section class="featured" v-if="!loading && featured.length">
@@ -513,7 +549,8 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
 .card-meta .stars.empty{ color:#d6cabd; }
 .card-meta .rating b{ color:var(--tomato); font-weight:800; }
 .card-meta .dot{ color:#d9cabb; }
-.card-meta .shop{ color:var(--muted); font-weight:600; }
+.card-meta .shop{ color:var(--muted); font-weight:600; cursor:pointer; transition:color .2s; }
+.card-meta .shop:hover{ color:var(--tomato); }
 .card-meta .dist{ color:var(--muted); font-weight:600; }
 .excerpt{ font-size:12.8px; color:#9b8c7e; line-height:1.6; flex:1; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .card-foot{ display:flex; align-items:center; gap:8px; margin-top:12px; font-size:12px; }
@@ -532,11 +569,31 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
 .like-btn.on{ animation:pop .3s ease; }
 @keyframes pop{ 0%{ transform:scale(1); } 40%{ transform:scale(1.35); } 100%{ transform:scale(1); } }
 
-/* 加载更多 / 到底 */
-.loadmore{ text-align:center; color:var(--muted); font-size:13px; padding:22px 0; display:flex; align-items:center; justify-content:center; gap:8px; }
-.loader{ width:18px; height:18px; border-radius:50%; border:2.5px solid #f0e6db; border-top-color:var(--tomato); animation:spin .8s linear infinite; }
-@keyframes spin{ to{ transform:rotate(360deg); } }
-.loadend{ text-align:center; color:#c4b3a4; font-size:12.5px; padding:18px 0 4px; }
+/* 分页控件 */
+.pager{
+  display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;
+  padding:26px 0 6px;
+}
+.pg-btn{
+  border:1.5px solid #ecdfd2; background:#fff; color:var(--ink);
+  padding:9px 16px; border-radius:11px; font-size:13.5px; font-weight:700;
+  cursor:pointer; transition:.2s; white-space:nowrap;
+}
+.pg-btn:hover:not(:disabled){ border-color:var(--orange); color:var(--orange); background:#fffaf4; }
+.pg-btn:disabled{ opacity:.45; cursor:not-allowed; }
+.pg-nums{ display:flex; align-items:center; gap:6px; }
+.pg-num{
+  min-width:36px; height:36px; padding:0 8px; border-radius:10px; cursor:pointer;
+  border:1.5px solid #ecdfd2; background:#fff; color:var(--muted);
+  font-size:13.5px; font-weight:700; transition:.2s;
+}
+.pg-num:hover{ border-color:var(--orange); color:var(--orange); }
+.pg-num.on{
+  background:linear-gradient(120deg,var(--orange),var(--tomato)); color:#fff; border-color:transparent;
+  box-shadow:0 6px 14px rgba(255,90,60,.28);
+}
+.pg-dots{ color:#c4b3a4; padding:0 2px; }
+.pg-info{ width:100%; text-align:center; color:var(--muted); font-size:12.5px; margin-top:2px; }
 
 /* 骨架屏 */
 .sk-card{ background:#fff; border-radius:18px; padding:0 0 16px; overflow:hidden; border:1.5px solid #f6ebe0; }

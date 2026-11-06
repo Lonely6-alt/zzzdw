@@ -134,6 +134,7 @@ onMounted(() => { if (tab.value === 'reg') refreshCaptcha() })
         <a href="#">忘记密码？</a>
       </div>
       <button class="btn" type="submit"><span>登录美食社区</span></button>
+      <router-link to="/admin/login" class="admin-entry">🛠 管理员后台入口</router-link>
     </form>
 
     <!-- 注册 -->
@@ -259,6 +260,10 @@ onMounted(() => { if (tab.value === 'reg') refreshCaptcha() })
 .btn:hover{ transform:translateY(-2px); box-shadow:0 14px 28px rgba(255,90,60,.42); }
 .btn:active{ transform:translateY(0); }
 @keyframes shine{ 0%{ left:-120%; } 60%,100%{ left:140%; } }
+
+.admin-entry{ display:block; text-align:center; margin-top:12px; font-size:13px; font-weight:600;
+  color:var(--muted); text-decoration:none; transition:.2s; }
+.admin-entry:hover{ color:#5b6cff; }
 
 .or{ text-align:center; color:var(--muted); font-size:12.5px; margin:16px 0; position:relative; }
 .or::before,.or::after{ content:""; position:absolute; top:50%; width:34%; height:1px; background:#ecdfd2; }

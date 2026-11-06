@@ -50,6 +50,17 @@ echo [1.6] 检查默认账号 admin/admin123 、 test/123456 ...
 "%MYSQL%" -uroot -p123456 --default-character-set=utf8mb4 food_db < "%~dp0springBootTest\sql\seed_users.sql" >nul 2>nul
 if errorlevel 1 ( echo       [警告] 默认账号写入失败，请检查 MySQL 是否启动 ) else ( echo       默认账号就绪 )
 
+REM [1.7] 美食数据：确保 200 道菜（幂等，按标题去重；机房重启后数据库被重置也能自动补齐）
+echo [1.7] 检查美食数据（目标 200 道）...
+"%MYSQL%" -uroot -p123456 --default-character-set=utf8mb4 food_db < "%~dp0springBootTest\sql\seed_posts_200.sql" >nul 2>nul
+if errorlevel 1 ( echo       [警告] 美食数据写入失败，请检查 MySQL 是否启动 ) else ( echo       美食数据就绪 )
+
+REM [1.8] 店铺信息 + 群聊：结构升级（shop / chat_group / chat_group_member / chat_group_message）与示例数据
+echo [1.8] 检查店铺与群聊数据表 ...
+"%MYSQL%" -uroot -p123456 --default-character-set=utf8mb4 < "%~dp0springBootTest\sql\upgrade_v3.sql" >nul 2>nul
+"%MYSQL%" -uroot -p123456 --default-character-set=utf8mb4 food_db < "%~dp0springBootTest\sql\seed_shop_chat.sql" >nul 2>nul
+if errorlevel 1 ( echo       [警告] 店铺/群聊数据写入失败，请检查 MySQL 是否启动 ) else ( echo       店铺与群聊数据就绪 )
+
 REM [2] 前端依赖
 echo [2/6] 检查前端依赖 node_modules ...
 if not exist "%~dp0food-login-vue\node_modules" (
@@ -62,10 +73,21 @@ if not exist "%~dp0food-login-vue\node_modules" (
 )
 
 REM [3] 启动 Spring Boot 后端（新窗口，端口 8081，数据走 MySQL food_db）
+REM JDK 兜底链：优先项目内 runtime\jdk-21（D盘，重启不丢） -> IDEA 自带 JBR -> C盘 Zulu
 echo [3/6] 启动 Spring Boot 后端  端口 8081 ...
+set "JDK_HOME="
+if exist "%~dp0runtime\jdk-21\bin\javac.exe" set "JDK_HOME=%~dp0runtime\jdk-21"
+if not defined JDK_HOME if exist "D:\IntelliJ IDEA 2024.3.2.2\jbr\bin\javac.exe" set "JDK_HOME=D:\IntelliJ IDEA 2024.3.2.2\jbr"
+if not defined JDK_HOME if exist "C:\Program Files\Zulu\zulu-21\bin\javac.exe" set "JDK_HOME=C:\Program Files\Zulu\zulu-21"
+if not defined JDK_HOME ( echo       [错误] 找不到任何 JDK！请确认 %~dp0runtime\jdk-21 存在 & pause & exit /b 1 )
+echo       使用 JDK: %JDK_HOME%
 pushd "%~dp0springBootTest"
-start "美食-后端8081" cmd /k "set SERVER__PORT= && set SERVER_PORT= && set JAVA_HOME= && %~dp0apache-maven-3.9.9\bin\mvn.cmd -Dmaven.repo.local=D:\workSpace\m2-repository -o spring-boot:run -Dspring-boot.run.jvmArguments=-Dfile.encoding=UTF-8 -Dspring-boot.run.arguments=--server.port=8081"
+start "美食-后端8081" cmd /k "set SERVER__PORT= && set SERVER_PORT= && set "JAVA_HOME=%JDK_HOME%" && %~dp0apache-maven-3.9.9\bin\mvn.cmd spring-boot:run -Dspring-boot.run.jvmArguments=-Dfile.encoding=UTF-8 -Dspring-boot.run.arguments=--server.port=8081"
 popd
+
+REM [3.5] Node 兜底：机房电脑 PATH 可能被重置，把 D 盘 nodejs 目录补进 PATH
+set "PATH=D:\Program Files\nodejs;%PATH%"
+where node >nul 2>nul || ( echo [警告] 找不到 node，前端可能起不来，请检查 D:\Program Files\nodejs )
 
 REM [4] 启动 Vue 前端（新窗口，端口锁定 5173，/api 代理到 8081）
 echo [4/6] 启动 Vue 前端  端口 5173 ...

@@ -10,11 +10,15 @@ import com.fenglin.springboottest.entity.Category;
 import com.fenglin.springboottest.entity.Favorite;
 import com.fenglin.springboottest.entity.Post;
 import com.fenglin.springboottest.entity.Review;
+import com.fenglin.springboottest.entity.Shop;
+import com.fenglin.springboottest.entity.User;
 import com.fenglin.springboottest.mapper.PostMapper;
+import com.fenglin.springboottest.mapper.ShopMapper;
 import com.fenglin.springboottest.service.CategoryService;
 import com.fenglin.springboottest.service.FavoriteService;
 import com.fenglin.springboottest.service.PostService;
 import com.fenglin.springboottest.service.ReviewService;
+import com.fenglin.springboottest.service.UserService;
 import com.fenglin.springboottest.vo.HomeVO;
 import org.springframework.stereotype.Service;
 
@@ -37,13 +41,47 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
     private final CategoryService categoryService;
     private final ReviewService reviewService;
     private final FavoriteService favoriteService;
+    private final ShopMapper shopMapper;
+    private final UserService userService;
 
     public PostServiceImpl(CategoryService categoryService,
                            ReviewService reviewService,
-                           FavoriteService favoriteService) {
+                           FavoriteService favoriteService,
+                           ShopMapper shopMapper,
+                           UserService userService) {
         this.categoryService = categoryService;
         this.reviewService = reviewService;
         this.favoriteService = favoriteService;
+        this.shopMapper = shopMapper;
+        this.userService = userService;
+    }
+
+    /** 批量回填店铺名称 / 图标 / 店主，供前端卡片直接展示 */
+    @Override
+    public void enrichPosts(List<Post> posts) {
+        if (posts == null || posts.isEmpty()) {
+            return;
+        }
+        java.util.Set<Long> shopIds = posts.stream().map(Post::getShopId)
+                .filter(Objects::nonNull).collect(Collectors.toSet());
+        if (shopIds.isEmpty()) {
+            return;
+        }
+        Map<Long, Shop> shops = shopMapper.selectBatchIds(shopIds).stream()
+                .collect(Collectors.toMap(Shop::getShopId, s -> s));
+        java.util.Set<Long> ownerIds = shops.values().stream().map(Shop::getOwnerId)
+                .filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, String> ownerNames = ownerIds.isEmpty() ? new LinkedHashMap<>()
+                : userService.listByIds(ownerIds).stream()
+                        .collect(Collectors.toMap(User::getId, User::getUsername));
+        for (Post p : posts) {
+            Shop s = p.getShopId() == null ? null : shops.get(p.getShopId());
+            if (s != null) {
+                p.setShopName(s.getShopName());
+                p.setShopEmoji(s.getEmoji());
+                p.setShopOwner(ownerNames.get(s.getOwnerId()));
+            }
+        }
     }
 
     @Override
@@ -97,6 +135,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         List<Post> records = list(w);
 
         Page<Post> pg = new Page<>(current, pageSize, total);
+        enrichPosts(records);
         pg.setRecords(records);
         return pg;
     }
@@ -119,8 +158,12 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
 
         vo.setHotWords(Arrays.asList("拉面", "寿司", "炸鸡", "抹茶", "拿铁", "火锅", "轻食", "烧烤"));
         vo.setCategories(categoryService.treeWithCounts());
-        vo.setFeatured(featured(6));
-        vo.setLatest(latest(8));
+        List<Post> featuredList = featured(6);
+        List<Post> latestList = latest(8);
+        enrichPosts(featuredList);
+        enrichPosts(latestList);
+        vo.setFeatured(featuredList);
+        vo.setLatest(latestList);
         return vo;
     }
 
@@ -151,6 +194,15 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         post.setCategory(category);
         post.setCategoryId(catId);
         post.setAuthor(author);
+        // 作者若已开店，菜品自动归到店铺名下（卡片展示店铺名）
+        User poster = userService.findByUsername(author);
+        if (poster != null) {
+            Shop myShop = shopMapper.selectOne(new LambdaQueryWrapper<Shop>()
+                    .eq(Shop::getOwnerId, poster.getId()).last("LIMIT 1"));
+            if (myShop != null) {
+                post.setShopId(myShop.getShopId());
+            }
+        }
         post.setEmoji(emoji);
         post.setContent(content);
         post.setRating(BigDecimal.ZERO);

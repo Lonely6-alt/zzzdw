@@ -32,10 +32,10 @@ function onLogout() {
   logout()
   router.push('/login')
 }
-// 后台管理：仅管理员可见入口；非管理员兜底提示（双保险）
+// 后台管理：所有人可见；管理员点击直接进后台，普通用户跳后台登录页
 function onAdmin() {
   if (isAdmin.value) router.push('/admin')
-  else toast('您没有管理员权限', 'error')
+  else router.push('/admin/login')
 }
 
 onMounted(async () => {
@@ -84,7 +84,7 @@ function startUnreadPoll() {
             <span v-if="unreadCount > 0" class="unread-dot">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
           </button>
           <button :class="{ on: isActive('/profile') }" @click="go('/profile')">我的</button>
-          <button v-if="isAdmin" class="admin" @click="onAdmin">🛠 后台管理</button>
+          <button class="admin" @click="onAdmin">🛠 后台管理</button>
         </nav>
 
         <div class="right">
