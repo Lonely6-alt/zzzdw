@@ -33,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -409,6 +410,90 @@ public class AdminController {
                 .set(Post::getShopId, null));
         shopService.removeById(id);
         return Map.of("ok", true);
+    }
+
+    // ==================== 店铺与内容趋势 ====================
+
+    /**
+     * 店铺与内容维度统计：GET /api/admin/shop-stats
+     * 返回近 14 天「新增菜品 / 新增点评」逐日趋势，以及菜品数最多的 5 家店。
+     * 数据量小（百级），直接在内存里按日期归并，避免为图表引入额外 SQL。
+     */
+    @GetMapping("/shop-stats")
+    public Map<String, Object> shopStats(HttpServletRequest request) {
+        requireAdmin(request);
+
+        LocalDate today = LocalDate.now();
+        List<String> labels = new ArrayList<>();
+        List<String> keys = new ArrayList<>();
+        Map<String, Long> postByDay = new LinkedHashMap<>();
+        Map<String, Long> reviewByDay = new LinkedHashMap<>();
+        for (int i = 13; i >= 0; i--) {
+            LocalDate d = today.minusDays(i);
+            String key = d.toString();
+            keys.add(key);
+            labels.add(String.format("%02d-%02d", d.getMonthValue(), d.getDayOfMonth()));
+            postByDay.put(key, 0L);
+            reviewByDay.put(key, 0L);
+        }
+
+        for (Post p : postService.list()) {
+            if (p.getCreatedAt() != null) {
+                String key = p.getCreatedAt().toLocalDate().toString();
+                if (postByDay.containsKey(key)) {
+                    postByDay.merge(key, 1L, Long::sum);
+                }
+            }
+        }
+        for (Review r : reviewService.list()) {
+            if (r.getCreatedAt() != null) {
+                String key = r.getCreatedAt().toLocalDate().toString();
+                if (reviewByDay.containsKey(key)) {
+                    reviewByDay.merge(key, 1L, Long::sum);
+                }
+            }
+        }
+
+        List<Long> postsDaily = new ArrayList<>();
+        List<Long> reviewsDaily = new ArrayList<>();
+        for (String key : keys) {
+            postsDaily.add(postByDay.getOrDefault(key, 0L));
+            reviewsDaily.add(reviewByDay.getOrDefault(key, 0L));
+        }
+
+        // 店铺 Top5：按在售菜品数排序，菜品数相同看均分
+        List<Shop> shops = new ArrayList<>(shopService.listShops(null, null));
+        shops.sort((a, b) -> {
+            int byPost = Integer.compare(
+                    b.getPostCount() == null ? 0 : b.getPostCount(),
+                    a.getPostCount() == null ? 0 : a.getPostCount());
+            if (byPost != 0) {
+                return byPost;
+            }
+            return Double.compare(
+                    b.getAvgRating() == null ? 0 : b.getAvgRating().doubleValue(),
+                    a.getAvgRating() == null ? 0 : a.getAvgRating().doubleValue());
+        });
+        List<Map<String, Object>> topShops = new ArrayList<>();
+        for (int i = 0; i < Math.min(5, shops.size()); i++) {
+            Shop s = shops.get(i);
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("shopId", s.getShopId());
+            m.put("shopName", s.getShopName());
+            m.put("emoji", s.getEmoji());
+            m.put("ownerName", s.getOwnerName());
+            m.put("postCount", s.getPostCount());
+            m.put("avgRating", s.getAvgRating());
+            m.put("reviewCount", s.getReviewCount());
+            topShops.add(m);
+        }
+
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("days", labels);
+        res.put("postsDaily", postsDaily);
+        res.put("reviewsDaily", reviewsDaily);
+        res.put("topShops", topShops);
+        return res;
     }
 
     // ==================== 私有工具 ====================
