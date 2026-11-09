@@ -143,8 +143,18 @@ if errorlevel 1 (
 )
 echo       Maven 自检通过
 
+REM [3.3] 依赖仓库：优先 D 盘持久仓库 + 离线模式（避免每次开机重下依赖，机房没网也能起）
+REM 若以后新增了依赖导致离线构建失败，临时双击命令行去掉 -o 跑一次即可（详见 AI-NOTES.md 已知坑）
+set "MVN_REPO=-o -Dmaven.repo.local=D:\workSpace\m2-repository"
+if not exist "D:\workSpace\m2-repository" (
+    set "MVN_REPO="
+    echo       [提示] 未找到 D:\workSpace\m2-repository，本次使用默认仓库（可能较慢）
+) else (
+    echo       依赖仓库: D:\workSpace\m2-repository（离线模式）
+)
+
 pushd "%~dp0springBootTest"
-start "美食-后端8081" cmd /k "set SERVER__PORT= && set SERVER_PORT= && set "JAVA_HOME=%JDK_HOME%" && %MVN_CMD% spring-boot:run -Dspring-boot.run.jvmArguments=-Dfile.encoding=UTF-8 -Dspring-boot.run.arguments=--server.port=8081"
+start "美食-后端8081" cmd /k "set SERVER__PORT= && set SERVER_PORT= && set "JAVA_HOME=%JDK_HOME%" && %MVN_CMD% %MVN_REPO% spring-boot:run -Dspring-boot.run.jvmArguments=-Dfile.encoding=UTF-8 -Dspring-boot.run.arguments=--server.port=8081"
 popd
 
 REM [3.5] Node 兜底：机房电脑 PATH 可能被重置，把 D 盘 nodejs 目录补进 PATH

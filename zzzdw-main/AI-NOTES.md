@@ -39,7 +39,7 @@
 - **后端 CaptchaController 会打印验证码答案到日志**（联调用），生产环境应删除。
 - 本机杀 Windows 进程（Git Bash 里）：`MSYS2_ARG_CONV_EXCL="*" taskkill /F /PID <pid>`；wmic 被安全策略禁用；cmd.exe 在 WorkBuddy 沙箱里被拦截，bat 只能由用户双击运行。
 - **Maven 启动后端**：本机 Maven 发行包在 Git Bash 下直接跑 `./mvnw`（shell 脚本）会报 `找不到或无法加载主类 org.codehaus.plexus.classworlds.launcher.Launcher`（classworlds 加载失败，是 shell 脚本在 Git Bash 下的已知坑）。**正确做法**：用 `mvnw.cmd`（Windows 批处理启动器），或指向缓存里的完整 Maven：`C:\Users\Administrator\.m2\wrapper\dists\apache-maven-3.9.9\*\apache-maven-3.9.9\bin\mvn.cmd`。`启动项目.bat` 用的就是 `mvnw.cmd`，双击即可，不要在 Git Bash 里手敲 `./mvnw`。
-- **后端 8081 迟迟起不来 / 启动脚本等待超时（2026-11-04 已根治）**：根因是 Maven 依赖每次开机都重新下载——① 项目自带的 `apache-maven-3.9.9\boot\` 缺 `plexus-classworlds-2.8.0.jar` 等 89 个文件（只剩 license），Maven 本体跑不起来；② C 盘 `~/.m2/repository` 依赖残缺（大量 jar 丢失只剩 pom），且 C 盘用户目录可能随开机重置。**修复（不要再改回去）**：本地仓库固定在 `D:\workSpace\m2-repository`（已用 dependency:go-offline 预热完整）；`启动项目.bat` / `start-dev.js` 后端改用项目自带 `apache-maven-3.9.9\bin\mvn.cmd` + `-Dmaven.repo.local=D:\workSpace\m2-repository -o`（离线模式，启动不再联网下载）；自带 Maven 的 `conf\settings.xml` 已固化 D 盘仓库 + 阿里云镜像。若确需新增依赖：先去掉 `-o` 跑一次让它下载进 D 盘仓库，再补回 `-o`。
+- **后端 8081 迟迟起不来 / 启动脚本等待超时（2026-11-04 根治，2026-11-09 复发后又加固）**：根因是 Maven 依赖每次开机都重新下载——① 项目自带的 `apache-maven-3.9.9\boot\` 缺 `plexus-classworlds-2.8.0.jar` 等 89 个文件（只剩 license，表现为 `Error: -classpath requires class path specification`）；② C 盘 `~/.m2/repository` 依赖残缺。**为什么会复发**：仓库忽略 `*.jar`，所以"复制/还原项目目录"会让自带的 Maven 再次变成无 jar 残缺版。**修复（2026-11-09 起脚本已能自愈，不要再手动修）**：`启动项目.bat` 检测到 `boot\*.jar` 缺失会自动从 `%USERPROFILE%\.m2\wrapper\dists` 补齐，并在开窗口前用 `call mvn -v` 自检（失败立即报错退出，不再空等）；依赖仓库固定在 `D:\workSpace\m2-repository`（778MB 完整，settings.xml 已固化 + 阿里云镜像），后端以 `-o -Dmaven.repo.local=...` 离线启动（实测 6 秒起）。若以后**新增依赖**导致离线构建失败：临时去掉 `-o` 跑一次让它下载进 D 盘仓库即可。另注意：批处理里调用另一个 .cmd 必须加 `call`，否则控制权移交、后续代码不执行。
 
 ## 数据库
 
@@ -79,3 +79,9 @@
   3. `启动项目.bat`（GBK）后端命令改为自带 mvn.cmd + `-Dmaven.repo.local=D:\workSpace\m2-repository -o`；等待 8081 由 120 秒放宽到 600 秒。`food-login-vue\start-dev.js` 同步修改。
   4. 自带 Maven `conf\settings.xml` 与 C 盘 `~/.m2/settings.xml` 均固化 D 盘仓库；conf 里另加阿里云镜像。
   5. 实测：离线 `spring-boot:run` 约 5 秒绑定 8081，`/api/posts` 返回 200。
+- 2026-11-09：**同一个坑复发 + 加固**。现象：一键启动卡在"等待后端 8081 就绪"，后端窗口报 `Error: -classpath requires class path specification`，前端 Vite 代理 `/api/chat/unread`、`/api/chat/sessions` 报 ECONNREFUSED 127.0.0.1:8081。根因：项目内 `apache-maven-3.9.9` 又变成 0 个 jar（`boot/` 只剩 .license，`lib/` 23 个文件全是 license）；另外 `D:\workSpace\m2-repository` 也不存在了，脚本又丢了 `-o` 参数，导致依赖被重新下载。修复：
+  1. 从 `~/.m2/wrapper/dists/apache-maven-3.9.9/3477a4f1` 补齐 49 个 jar；`D:\workSpace\m2-repository` 由 C 盘 776MB 仓库合并重建为 778MB。
+  2. `启动项目.bat` 新增 **Maven 自愈**（缺 jar 自动 xcopy 补齐）+ **多级兜底**（项目内 → 本机 dists → mvnw.cmd → PATH）+ **启动自检**（`call mvn -v` 失败即报错退出），并补回 `-o -Dmaven.repo.local=D:\workSpace\m2-repository`。
+  3. `[1.5]~[1.8]` 里对 `upgrade_v2/seed_users/seed_posts_200/upgrade_v3/seed_shop_chat` 的引用改为"文件存在才执行"，不再每次刷假 `[警告] 写入失败`（磁盘上确实只有 `food_db.sql`）。
+  4. 等待后端时间 600s→180s，失败时直接列出三种常见原因。
+  - 验证：一键启动全流程跑通（自检通过 → 5173 就绪 → 8081 就绪）；离线 `spring-boot:run` 2.9 秒完成、6 秒可访问；`/api/chat/unread`、`/api/chat/sessions`、`/api/friends`、`/api/me` 经代理全部 200。
