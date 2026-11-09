@@ -15,6 +15,7 @@ import AdminLoginView from '../views/AdminLoginView.vue'
 import AdminLayout from '../views/admin/AdminLayout.vue'
 import AdminDashboard from '../views/admin/AdminDashboard.vue'
 import UserManage from '../views/admin/UserManage.vue'
+import ShopManage from '../views/admin/ShopManage.vue'
 import NoteReview from '../views/admin/NoteReview.vue'
 import CategoryManage from '../views/admin/CategoryManage.vue'
 import TagManage from '../views/admin/TagManage.vue'
@@ -39,6 +40,7 @@ const routes = [
     children: [
       { path: '', name: 'admin', component: AdminDashboard, meta: { title: '数据仪表盘' } },
       { path: 'users', name: 'admin-users', component: UserManage, meta: { title: '用户管理' } },
+      { path: 'shops', name: 'admin-shops', component: ShopManage, meta: { title: '店铺管理' } },
       { path: 'reviews', name: 'admin-reviews', component: NoteReview, meta: { title: '美食笔记审核' } },
       { path: 'categories', name: 'admin-categories', component: CategoryManage, meta: { title: '美食分类管理' } },
       { path: 'tags', name: 'admin-tags', component: TagManage, meta: { title: '热门标签管理' } },

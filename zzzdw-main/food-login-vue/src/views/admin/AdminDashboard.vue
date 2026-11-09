@@ -18,7 +18,9 @@ const cards = [
   { key: 'postsApproved', label: '已通过笔记', icon: '🍚' },
   { key: 'comments', label: '评论总数', icon: '💬' },
   { key: 'categories', label: '美食分类', icon: '🍜' },
-  { key: 'tags', label: '热门标签', icon: '🔥' }
+  { key: 'tags', label: '热门标签', icon: '🔥' },
+  { key: 'shops', label: '店铺总数', icon: '🏠' },
+  { key: 'shopsActive', label: '营业中店铺', icon: '🟢' }
 ]
 </script>
 

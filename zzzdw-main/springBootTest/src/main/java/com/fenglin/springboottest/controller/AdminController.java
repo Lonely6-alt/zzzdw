@@ -1,17 +1,20 @@
 package com.fenglin.springboottest.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fenglin.springboottest.common.BizException;
 import com.fenglin.springboottest.entity.Category;
 import com.fenglin.springboottest.entity.Favorite;
 import com.fenglin.springboottest.entity.Post;
 import com.fenglin.springboottest.entity.Review;
+import com.fenglin.springboottest.entity.Shop;
 import com.fenglin.springboottest.entity.Tag;
 import com.fenglin.springboottest.entity.User;
 import com.fenglin.springboottest.service.CategoryService;
 import com.fenglin.springboottest.service.FavoriteService;
 import com.fenglin.springboottest.service.PostService;
 import com.fenglin.springboottest.service.ReviewService;
+import com.fenglin.springboottest.service.ShopService;
 import com.fenglin.springboottest.service.TagService;
 import com.fenglin.springboottest.service.UserService;
 import com.fenglin.springboottest.util.JwtUtil;
@@ -53,18 +56,20 @@ public class AdminController {
     private final CategoryService categoryService;
     private final TagService tagService;
     private final FavoriteService favoriteService;
+    private final ShopService shopService;
     private final JwtUtil jwtUtil;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     public AdminController(UserService userService, PostService postService, ReviewService reviewService,
                            CategoryService categoryService, TagService tagService,
-                           FavoriteService favoriteService, JwtUtil jwtUtil) {
+                           FavoriteService favoriteService, ShopService shopService, JwtUtil jwtUtil) {
         this.userService = userService;
         this.postService = postService;
         this.reviewService = reviewService;
         this.categoryService = categoryService;
         this.tagService = tagService;
         this.favoriteService = favoriteService;
+        this.shopService = shopService;
         this.jwtUtil = jwtUtil;
     }
 
@@ -83,6 +88,8 @@ public class AdminController {
         res.put("comments", reviewService.count());
         res.put("categories", categoryService.count(new LambdaQueryWrapper<Category>().ne(Category::getParentId, 0)));
         res.put("tags", tagService.count());
+        res.put("shops", shopService.count());
+        res.put("shopsActive", shopService.count(new LambdaQueryWrapper<Shop>().eq(Shop::getStatus, "active")));
         return res;
     }
 
@@ -353,6 +360,54 @@ public class AdminController {
         }
         reviewService.removeById(id);
         postService.refreshPostStats(r.getPostId());
+        return Map.of("ok", true);
+    }
+
+    // ==================== 店铺管理 ====================
+
+    /** 店铺列表（可按店名/简介关键词筛选），含店主与经营统计：GET /api/admin/shops?keyword=面 */
+    @GetMapping("/shops")
+    public List<Shop> adminShops(@RequestParam(required = false) String keyword, HttpServletRequest request) {
+        requireAdmin(request);
+        return shopService.listShops(keyword, null);
+    }
+
+    /** 修改店铺营业状态：PATCH /api/admin/shops/1，body: {status: active/closed} */
+    @PatchMapping("/shops/{id}")
+    public Shop patchShop(@PathVariable Long id, @RequestBody Map<String, String> body,
+                          HttpServletRequest request) {
+        requireAdmin(request);
+        Shop shop = shopService.getById(id);
+        if (shop == null) {
+            throw new BizException(404, "店铺不存在");
+        }
+        String status = body.get("status");
+        if (status != null) {
+            if (!List.of("active", "closed").contains(status)) {
+                throw new BizException(400, "非法的店铺状态");
+            }
+            shop.setStatus(status);
+            shop.setUpdateTime(LocalDateTime.now());
+            shopService.updateById(shop);
+        }
+        return shop;
+    }
+
+    /**
+     * 关店：DELETE /api/admin/shops/1。
+     * 店内菜品不删除，只解除店铺归属（shop_id 置空），避免误删用户内容。
+     */
+    @DeleteMapping("/shops/{id}")
+    public Map<String, Object> deleteShop(@PathVariable Long id, HttpServletRequest request) {
+        requireAdmin(request);
+        if (shopService.getById(id) == null) {
+            throw new BizException(404, "店铺不存在");
+        }
+        // MyBatis-Plus 默认忽略 null 字段，置空必须用 UpdateWrapper
+        postService.update(null, new LambdaUpdateWrapper<Post>()
+                .eq(Post::getShopId, id)
+                .set(Post::getShopId, null));
+        shopService.removeById(id);
         return Map.of("ok", true);
     }
 

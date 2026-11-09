@@ -7,6 +7,7 @@ const router = useRouter()
 const menus = [
   { path: '/admin', label: '数据仪表盘', icon: '📊', exact: true },
   { path: '/admin/users', label: '用户管理', icon: '👥' },
+  { path: '/admin/shops', label: '店铺管理', icon: '🏠' },
   { path: '/admin/reviews', label: '美食笔记审核', icon: '📝' },
   { path: '/admin/categories', label: '美食分类管理', icon: '🍜' },
   { path: '/admin/tags', label: '热门标签管理', icon: '🔥' },
