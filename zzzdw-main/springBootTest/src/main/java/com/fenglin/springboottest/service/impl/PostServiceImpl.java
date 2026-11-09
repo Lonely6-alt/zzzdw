@@ -288,7 +288,10 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
             return new ArrayList<>();
         }
         List<Long> ids = fs.stream().map(Favorite::getPostId).collect(Collectors.toList());
-        return new ArrayList<>(listByIds(ids));
+        // 仅保留仍在上架的菜品：被店家下架（off）或驳回的不再出现在「我的收藏」里
+        return listByIds(ids).stream()
+                .filter(p -> "approved".equals(p.getStatus()))
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     /** 根据点评重新计算帖子的平均评分与点评数 */

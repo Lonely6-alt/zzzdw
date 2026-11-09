@@ -11,6 +11,7 @@ const API = '/api'
 
 const loading = ref(false)
 const saving = ref(false)
+const acting = ref(null)   // 正在上/下架的菜品 id，避免重复点击
 const opened = ref(false)
 const shop = ref(null)
 const posts = ref([])
@@ -30,8 +31,8 @@ function authHeaders(extra = {}) {
   return { ...extra, Authorization: `Bearer ${getToken()}` }
 }
 
-async function load() {
-  loading.value = true
+async function load(silent = false) {
+  if (!silent) loading.value = true
   try {
     const r = await fetch(`${API}/shop`, { headers: authHeaders() })
     if (r.status === 401) { router.push('/login'); return }
@@ -44,6 +45,28 @@ async function load() {
     toast(e.message || '加载店铺失败', 'error')
   } finally {
     loading.value = false
+  }
+}
+
+// 店主上架 / 下架自己的菜品：approved <-> off（待审核/已驳回不在这里动）
+async function toggleShelf(p, target) {
+  acting.value = p.id
+  try {
+    const r = await fetch(`${API}/shop/posts/${p.id}`, {
+      method: 'PATCH',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ status: target })
+    })
+    if (r.status === 401) { router.push('/login'); return }
+    const data = await r.json().catch(() => ({}))
+    if (!r.ok) throw new Error(data.message || '操作失败')
+    p.status = data.status || target
+    toast(target === 'off' ? '已下架，食客暂时看不到了' : '已重新上架', 'success')
+    await load(true)   // 统计要跟着变，静默刷新避免整页闪白
+  } catch (e) {
+    toast(e.message || '操作失败', 'error')
+  } finally {
+    acting.value = null
   }
 }
 
@@ -111,7 +134,7 @@ function stars(n) {
   return '★'.repeat(f) + '☆'.repeat(Math.max(0, 5 - f))
 }
 function statusText(s) {
-  return { approved: '已上架', pending: '待审核', rejected: '已驳回' }[s] || s
+  return { approved: '已上架', off: '已下架', pending: '待审核', rejected: '已驳回' }[s] || s
 }
 
 onMounted(load)
@@ -187,6 +210,14 @@ onMounted(load)
               <div class="c-foot">
                 <span class="c-stars">{{ stars(p.rating) }}</span>
                 <span>{{ Number(p.rating || 0).toFixed(1) }} · 💬 {{ p.reviewCount ?? 0 }} · ★ {{ p.favoriteCount ?? 0 }}</span>
+              </div>
+              <!-- 店主自管：已上架可下架，已下架可重新上架；待审核/已驳回交给管理员 -->
+              <div v-if="p.status === 'approved' || p.status === 'off'" class="c-act">
+                <button :disabled="acting === p.id"
+                        :class="{ re: p.status === 'off' }"
+                        @click.stop="toggleShelf(p, p.status === 'off' ? 'approved' : 'off')">
+                  {{ acting === p.id ? '处理中…' : (p.status === 'off' ? '重新上架' : '下架') }}
+                </button>
               </div>
             </div>
           </article>
@@ -324,12 +355,19 @@ onMounted(load)
 .tag{ display:inline-block; font-size:11.5px; color:var(--tomato); background:#fff0ea; padding:3px 9px; border-radius:10px; }
 .c-status{ font-size:11px; font-weight:700; padding:3px 8px; border-radius:999px; white-space:nowrap; }
 .c-status.approved{ background:#e9f7ee; color:var(--ok); }
+.c-status.off{ background:#f1ece5; color:var(--muted); }
 .c-status.pending{ background:#fff1e0; color:#c8771a; }
 .c-status.rejected{ background:#fde8e8; color:var(--err); }
 .card h3{ font-size:16px; margin-bottom:6px; }
 .excerpt{ font-size:13px; color:var(--muted); line-height:1.5;
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .c-foot{ display:flex; flex-direction:column; gap:2px; margin-top:10px; font-size:12px; color:var(--muted); }
+.c-act{ margin-top:11px; padding-top:10px; border-top:1px dashed #f0e6db; }
+.c-act button{ border:1.5px solid #ecdfd2; background:#fff; color:var(--muted); border-radius:9px;
+  padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; transition:.18s; }
+.c-act button:hover:not(:disabled){ border-color:var(--tomato); color:var(--tomato); }
+.c-act button.re{ border-color:#ffd9b0; color:var(--tomato); background:#fff7f2; }
+.c-act button:disabled{ opacity:.55; cursor:not-allowed; }
 .c-stars{ color:#f5a623; letter-spacing:1px; }
 
 .hint{ position:relative; z-index:2; color:var(--muted); padding:34px 0; text-align:center; font-size:14px; }

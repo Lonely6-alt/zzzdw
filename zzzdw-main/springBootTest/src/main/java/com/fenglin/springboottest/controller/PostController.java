@@ -56,12 +56,12 @@ public class PostController {
         return list;
     }
 
-    /** 帖子详情：GET /api/posts/1，不存在返回 404 */
+    /** 帖子详情：GET /api/posts/1，不存在或已被店家下架（status=off）返回 404 */
     @GetMapping("/posts/{id}")
     public Post detail(@PathVariable Long id) {
         Post post = postService.getById(id);
-        if (post == null) {
-            throw new BizException(404, "帖子不存在");
+        if (post == null || "off".equals(post.getStatus())) {
+            throw new BizException(404, "帖子不存在或已下架");
         }
         postService.enrichPosts(java.util.Collections.singletonList(post));
         return post;

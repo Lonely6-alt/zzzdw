@@ -1,11 +1,15 @@
 package com.fenglin.springboottest.controller;
 
+import com.fenglin.springboottest.common.BizException;
 import com.fenglin.springboottest.dto.ShopRequest;
+import com.fenglin.springboottest.entity.Post;
 import com.fenglin.springboottest.entity.Shop;
+import com.fenglin.springboottest.service.PostService;
 import com.fenglin.springboottest.service.ShopService;
 import com.fenglin.springboottest.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,10 +30,12 @@ import java.util.Map;
 public class ShopController {
 
     private final ShopService shopService;
+    private final PostService postService;
     private final JwtUtil jwtUtil;
 
-    public ShopController(ShopService shopService, JwtUtil jwtUtil) {
+    public ShopController(ShopService shopService, PostService postService, JwtUtil jwtUtil) {
         this.shopService = shopService;
+        this.postService = postService;
         this.jwtUtil = jwtUtil;
     }
 
@@ -68,5 +74,45 @@ public class ShopController {
     @PutMapping("/shop")
     public Shop save(@RequestBody ShopRequest req, HttpServletRequest request) {
         return shopService.saveMine(req, jwtUtil.requireUsername(request));
+    }
+
+    /**
+     * 店主上架 / 下架自己的菜品：PATCH /api/shop/posts/12，body: {status: off|approved}
+     * <p>
+     * 只允许在 approved（已上架）与 off（已下架）之间切换，且只能操作自己发布的菜品；
+     * pending（待审核）/ rejected（已驳回）仍由管理员在后台审核，店主不能自行放行。
+     */
+    @PatchMapping("/shop/posts/{postId}")
+    public Post togglePostStatus(@PathVariable Long postId, @RequestBody Map<String, String> body,
+                                 HttpServletRequest request) {
+        String username = jwtUtil.requireUsername(request);
+        Post post = postService.getById(postId);
+        if (post == null) {
+            throw new BizException(404, "菜品不存在");
+        }
+        // 归属判断：自己发布的，或已归属到我的店铺（兼容历史数据里由他人代发的菜品）
+        Shop myShop = shopService.findByOwnerName(username);
+        boolean mine = username.equals(post.getAuthor())
+                || (myShop != null && myShop.getShopId().equals(post.getShopId()));
+        if (!mine) {
+            throw new BizException(403, "只能操作自己店铺的菜品");
+        }
+
+        String target = body.get("status");
+        if ("off".equals(target)) {
+            if (!"approved".equals(post.getStatus())) {
+                throw new BizException(400, "只有已上架的菜品可以下架");
+            }
+            post.setStatus("off");
+        } else if ("approved".equals(target)) {
+            if (!"off".equals(post.getStatus())) {
+                throw new BizException(400, "只有已下架的菜品可以重新上架");
+            }
+            post.setStatus("approved");
+        } else {
+            throw new BizException(400, "只能设置为 off（下架）或 approved（上架）");
+        }
+        postService.updateById(post);
+        return post;
     }
 }
