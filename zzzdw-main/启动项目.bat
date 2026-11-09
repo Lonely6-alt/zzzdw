@@ -36,6 +36,9 @@ if errorlevel 1 (
 )
 
 REM [1.5] 应用结构升级脚本（幂等，已应用则无变化）
+REM 说明：仓库里只保留了 sql\food_db.sql（含完整结构与示例数据），
+REM       以下增量脚本若不存在就跳过，不再刷"[警告] 写入失败"的假错误。
+if not exist "%~dp0springBootTest\sql\upgrade_v2.sql" goto :skip_v2
 "%MYSQL%" -uroot -p123456 -e "USE food_db; SELECT 1 FROM tag LIMIT 1;" >nul 2>nul
 if errorlevel 1 (
     echo       应用升级脚本 sql\upgrade_v2.sql（tag 表等）...
@@ -44,22 +47,31 @@ if errorlevel 1 (
 ) else (
     echo       表结构已是最新，跳过升级
 )
+:skip_v2
 
-REM [1.6] 默认账号：food_db.sql 只有表结构没有数据，空库不补账号就登录不了后台（幂等，不覆盖已改密码）
+REM [1.6] 默认账号（若提供 seed_users.sql 才执行；food_db.sql 已自带示例账号）
+if not exist "%~dp0springBootTest\sql\seed_users.sql" goto :skip_seed_users
 echo [1.6] 检查默认账号 admin/admin123 、 test/123456 ...
 "%MYSQL%" -uroot -p123456 --default-character-set=utf8mb4 food_db < "%~dp0springBootTest\sql\seed_users.sql" >nul 2>nul
 if errorlevel 1 ( echo       [警告] 默认账号写入失败，请检查 MySQL 是否启动 ) else ( echo       默认账号就绪 )
+:skip_seed_users
 
-REM [1.7] 美食数据：确保 200 道菜（幂等，按标题去重；机房重启后数据库被重置也能自动补齐）
+REM [1.7] 美食数据（若提供 seed_posts_200.sql 才执行）
+if not exist "%~dp0springBootTest\sql\seed_posts_200.sql" goto :skip_seed_posts
 echo [1.7] 检查美食数据（目标 200 道）...
 "%MYSQL%" -uroot -p123456 --default-character-set=utf8mb4 food_db < "%~dp0springBootTest\sql\seed_posts_200.sql" >nul 2>nul
 if errorlevel 1 ( echo       [警告] 美食数据写入失败，请检查 MySQL 是否启动 ) else ( echo       美食数据就绪 )
+:skip_seed_posts
 
-REM [1.8] 店铺信息 + 群聊：结构升级（shop / chat_group / chat_group_member / chat_group_message）与示例数据
+REM [1.8] 店铺信息 + 群聊（若提供 upgrade_v3.sql / seed_shop_chat.sql 才执行）
+if not exist "%~dp0springBootTest\sql\upgrade_v3.sql" goto :skip_shops
 echo [1.8] 检查店铺与群聊数据表 ...
 "%MYSQL%" -uroot -p123456 --default-character-set=utf8mb4 < "%~dp0springBootTest\sql\upgrade_v3.sql" >nul 2>nul
-"%MYSQL%" -uroot -p123456 --default-character-set=utf8mb4 food_db < "%~dp0springBootTest\sql\seed_shop_chat.sql" >nul 2>nul
-if errorlevel 1 ( echo       [警告] 店铺/群聊数据写入失败，请检查 MySQL 是否启动 ) else ( echo       店铺与群聊数据就绪 )
+if exist "%~dp0springBootTest\sql\seed_shop_chat.sql" (
+    "%MYSQL%" -uroot -p123456 --default-character-set=utf8mb4 food_db < "%~dp0springBootTest\sql\seed_shop_chat.sql" >nul 2>nul
+    if errorlevel 1 ( echo       [警告] 店铺/群聊数据写入失败，请检查 MySQL 是否启动 ) else ( echo       店铺与群聊数据就绪 )
+)
+:skip_shops
 
 REM [2] 前端依赖
 echo [2/6] 检查前端依赖 node_modules ...
@@ -81,8 +93,58 @@ if not defined JDK_HOME if exist "D:\IntelliJ IDEA 2024.3.2.2\jbr\bin\javac.exe"
 if not defined JDK_HOME if exist "C:\Program Files\Zulu\zulu-21\bin\javac.exe" set "JDK_HOME=C:\Program Files\Zulu\zulu-21"
 if not defined JDK_HOME ( echo       [错误] 找不到任何 JDK！请确认 %~dp0runtime\jdk-21 存在 & pause & exit /b 1 )
 echo       使用 JDK: %JDK_HOME%
+
+REM [3.1] Maven 自愈 + 兜底
+REM 常见坑：apache-maven-3.9.9 目录被拷成"只剩 license 没有 jar"，mvn 会报
+REM   Error: -classpath requires class path specification
+REM 这里先从本机 wrapper 缓存自动补齐 jar，补不齐再改用其他 Maven。
+set "MVN_DIR=%~dp0apache-maven-3.9.9"
+if not exist "%MVN_DIR%\boot\*.jar" (
+    echo       [修复] 项目内 Maven 缺少 jar，尝试从本机缓存自动补齐 ...
+    for /d %%D in ("%USERPROFILE%\.m2\wrapper\dists\apache-maven-3.9.9\*") do (
+        if exist "%%D\boot\*.jar" (
+            xcopy "%%D\boot" "%MVN_DIR%\boot\" /E /Y /I >nul 2>nul
+            xcopy "%%D\lib"  "%MVN_DIR%\lib\"  /E /Y /I >nul 2>nul
+            xcopy "%%D\conf" "%MVN_DIR%\conf\" /E /Y /I >nul 2>nul
+            echo       已从 %%D 补齐
+        )
+    )
+)
+
+set "MVN_CMD="
+if exist "%MVN_DIR%\boot\*.jar" if exist "%MVN_DIR%\bin\mvn.cmd" set "MVN_CMD=%MVN_DIR%\bin\mvn.cmd"
+if not defined MVN_CMD (
+    for /d %%D in ("%USERPROFILE%\.m2\wrapper\dists\apache-maven-3.9.9\*") do (
+        if exist "%%D\boot\*.jar" set "MVN_CMD=%%D\bin\mvn.cmd"
+    )
+)
+if not defined MVN_CMD if exist "%~dp0springBootTest\mvnw.cmd" set "MVN_CMD=%~dp0springBootTest\mvnw.cmd"
+if not defined MVN_CMD (
+    where mvn >nul 2>nul && set "MVN_CMD=mvn"
+)
+if not defined MVN_CMD (
+    echo       [错误] 找不到可用的 Maven。
+    echo              请把完整的 apache-maven-3.9.9（含 boot\plexus-classworlds-*.jar 与 lib\*.jar）放回项目根目录，
+    echo              或联网后运行 springBootTest\mvnw.cmd 让它自动下载。
+    pause
+    exit /b 1
+)
+echo       使用 Maven: %MVN_CMD%
+
+REM [3.2] 启动前自检：Maven 真能跑起来再开窗口，避免后面空等 10 分钟
+REM 注意：调用 .cmd 必须加 call，否则控制权移交、后面的代码不会执行
+call "%MVN_CMD%" -v >nul 2>nul
+if errorlevel 1 (
+    echo       [错误] Maven 无法运行（多为发行包缺 jar）。错误窗口里通常显示：
+    echo              Error: -classpath requires class path specification
+    echo              请检查 %MVN_DIR%\boot 下是否存在 plexus-classworlds-*.jar
+    pause
+    exit /b 1
+)
+echo       Maven 自检通过
+
 pushd "%~dp0springBootTest"
-start "美食-后端8081" cmd /k "set SERVER__PORT= && set SERVER_PORT= && set "JAVA_HOME=%JDK_HOME%" && %~dp0apache-maven-3.9.9\bin\mvn.cmd spring-boot:run -Dspring-boot.run.jvmArguments=-Dfile.encoding=UTF-8 -Dspring-boot.run.arguments=--server.port=8081"
+start "美食-后端8081" cmd /k "set SERVER__PORT= && set SERVER_PORT= && set "JAVA_HOME=%JDK_HOME%" && %MVN_CMD% spring-boot:run -Dspring-boot.run.jvmArguments=-Dfile.encoding=UTF-8 -Dspring-boot.run.arguments=--server.port=8081"
 popd
 
 REM [3.5] Node 兜底：机房电脑 PATH 可能被重置，把 D 盘 nodejs 目录补进 PATH
@@ -111,9 +173,9 @@ for /l %%i in (1,1,90) do (
 echo.
 
 REM [6] 等后端 8081 起来（否则页面能开但登录/帖子接口 500）
-echo [6/6] 等待后端 8081 端口就绪（最多 600 秒，若在补下载 Maven 依赖会较慢）...
+echo [6/6] 等待后端 8081 端口就绪（最多 180 秒；首次编译/下载依赖会慢一些）...
 set "API_OK=0"
-for /l %%i in (1,1,600) do (
+for /l %%i in (1,1,180) do (
     if "!API_OK!"=="0" (
         netstat -ano | findstr "LISTENING" | findstr ":8081 " >nul 2>nul && set "API_OK=1"
         if "!API_OK!"=="0" (
@@ -136,7 +198,10 @@ if "!WEB_OK!"=="1" (
 if "!API_OK!"=="1" (
     echo   后端接口:     http://localhost:8081  已就绪
 ) else (
-    echo   [警告] 后端 8081 在 600 秒内未就绪！请看 "美食-后端8081" 窗口里的红色报错并截图反馈
+    echo   [警告] 后端 8081 在 180 秒内未就绪！请先看 "美食-后端8081" 窗口里的报错，常见原因：
+    echo          1^) Maven 报 "-classpath requires class path specification"  ^-^> apache-maven-3.9.9 缺 jar
+    echo          2^) 报 "Port 8081 was already in use"                      ^-^> 先双击 停止项目.bat 再启动
+    echo          3^) 报 "Access denied for user 'root'"                     ^-^> 检查 MySQL 服务与密码
 )
 echo   数据库:       MySQL food_db ^(localhost:3306^)
 echo   关闭项目请双击  停止项目.bat
