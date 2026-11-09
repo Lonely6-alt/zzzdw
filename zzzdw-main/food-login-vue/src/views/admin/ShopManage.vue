@@ -72,7 +72,7 @@ function avg(v) { return Number(v || 0).toFixed(1) }
     <table v-else>
       <thead>
         <tr>
-          <th>店铺</th><th>店主</th><th>商圈</th><th>菜品</th>
+          <th>店铺</th><th>店主</th><th>商圈</th><th>营业时间</th><th>菜品</th>
           <th>均分</th><th>点评</th><th>收藏</th><th>状态</th><th>开店时间</th><th>操作</th>
         </tr>
       </thead>
@@ -85,6 +85,10 @@ function avg(v) { return Number(v || 0).toFixed(1) }
           </td>
           <td>@{{ s.ownerName || '未知' }}</td>
           <td>{{ s.district || '—' }}</td>
+          <td class="hours">
+            <template v-if="s.openTime && s.closeTime">🕐 {{ s.openTime }}–{{ s.closeTime }}</template>
+            <template v-else>未设置</template>
+          </td>
           <td>{{ s.postCount ?? 0 }}</td>
           <td>{{ avg(s.avgRating) }}</td>
           <td>{{ s.reviewCount ?? 0 }}</td>
@@ -126,6 +130,7 @@ td b{ font-weight: 700; }
 .desc{ font-size: 11.5px; color: #a49789; margin-top: 3px; max-width: 240px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st{ font-size: 12px; padding: 3px 9px; border-radius: 8px; white-space: nowrap; }
+.hours{ white-space: nowrap; font-size: 12.5px; color: #6b5b4d; }
 .st.active{ background: #e6f6ec; color: #2e9e5b; }
 .st.closed{ background: #f1ece5; color: #8a7a6d; }
 .ops{ white-space: nowrap; }

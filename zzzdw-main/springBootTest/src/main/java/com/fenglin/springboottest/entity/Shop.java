@@ -52,6 +52,12 @@ public class Shop {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime updateTime;
 
+    /** 营业开始时间，格式 HH:mm（如 09:00）；为空表示店家未设置 */
+    private String openTime;
+
+    /** 营业结束时间，格式 HH:mm（如 21:30）；为空表示店家未设置 */
+    private String closeTime;
+
     /** 店主用户名（非数据库字段，列表查询后回填，点击可发起私信） */
     @TableField(exist = false)
     private String ownerName;

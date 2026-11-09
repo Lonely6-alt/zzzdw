@@ -76,6 +76,7 @@ onMounted(load)
           <p class="desc">{{ shop.description || '这家店还没有写简介～' }}</p>
           <div class="meta">
             <span v-if="shop.district">📍 {{ shop.district }}</span>
+            <span v-if="shop.openTime && shop.closeTime">🕐 {{ shop.openTime }}–{{ shop.closeTime }}</span>
             <span v-if="shop.phone">📞 {{ shop.phone }}</span>
             <span v-if="shop.ownerName">👤 店主 @{{ shop.ownerName }}</span>
             <span>🗓 开店于 {{ dateStr(shop.createTime) }}</span>

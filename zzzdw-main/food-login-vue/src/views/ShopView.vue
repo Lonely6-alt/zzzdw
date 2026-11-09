@@ -18,7 +18,10 @@ const posts = ref([])
 const editing = ref(false)
 
 // 开店 / 改资料表单
-const form = ref({ shopName: '', emoji: '🏠', description: '', district: '', phone: '', status: 'active' })
+const form = ref({
+  shopName: '', emoji: '🏠', description: '', district: '', phone: '',
+  status: 'active', openTime: '09:00', closeTime: '21:30'
+})
 
 // 可选图标与商圈（商圈与数据库现有数据保持一致）
 const EMOJIS = ['🍜', '🍲', '🍥', '🥢', '🥟', '🔥', '🍢', '🦪', '🍻', '🍗', '🥗', '🍔', '🥑', '🍰', '☕', '🏠']
@@ -79,14 +82,19 @@ function startEdit() {
     description: s.description || '',
     district: s.district || '',
     phone: s.phone || '',
-    status: s.status || 'active'
+    status: s.status || 'active',
+    openTime: s.openTime || '09:00',
+    closeTime: s.closeTime || '21:30'
   }
   editing.value = true
 }
 
 // 未开店：打开同一表单，填写后即为开店
 function startOpen() {
-  form.value = { shopName: '', emoji: '🏠', description: '', district: '', phone: '', status: 'active' }
+  form.value = {
+    shopName: '', emoji: '🏠', description: '', district: '', phone: '',
+    status: 'active', openTime: '09:00', closeTime: '21:30'
+  }
   editing.value = true
 }
 
@@ -107,7 +115,9 @@ async function save() {
         description: form.value.description.trim(),
         district: form.value.district,
         phone: form.value.phone.trim(),
-        status: form.value.status
+        status: form.value.status,
+        openTime: form.value.openTime || '',
+        closeTime: form.value.closeTime || ''
       })
     })
     const data = await r.json().catch(() => ({}))
@@ -170,6 +180,7 @@ onMounted(load)
             <p class="desc">{{ shop.description || '这家店还没有写简介，点右上角编辑补充一下吧～' }}</p>
             <div class="meta">
               <span v-if="shop.district">📍 {{ shop.district }}</span>
+              <span v-if="shop.openTime && shop.closeTime">🕐 {{ shop.openTime }}–{{ shop.closeTime }}</span>
               <span v-if="shop.phone">📞 {{ shop.phone }}</span>
               <span>🗓 开店于 {{ dateStr(shop.createTime) }}</span>
               <span v-if="shop.ownerName">👤 店主 @{{ shop.ownerName }}</span>
@@ -269,6 +280,17 @@ onMounted(load)
               <option value="active">营业中</option>
               <option value="closed">休息中</option>
             </select>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>营业开始 <em>留空则不展示营业时间</em></label>
+            <input v-model="form.openTime" type="time" class="input" />
+          </div>
+          <div class="field">
+            <label>营业结束</label>
+            <input v-model="form.closeTime" type="time" class="input" />
           </div>
         </div>
 

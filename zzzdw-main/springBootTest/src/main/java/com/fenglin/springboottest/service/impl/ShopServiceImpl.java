@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +33,13 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements Sh
 
     /** 允许的营业状态：active=营业中 closed=休息 */
     private static final Set<String> STATUS = Set.of("active", "closed");
+
+    /** 营业时间格式 HH:mm（小时 0~23，分钟 0~59） */
+    private static final Pattern TIME_PATTERN = Pattern.compile("^([01]?\\d|2[0-3]):[0-5]\\d$");
+
+    /** 开店时的默认营业时间 */
+    private static final String DEFAULT_OPEN_TIME = "09:00";
+    private static final String DEFAULT_CLOSE_TIME = "21:30";
 
     private final UserService userService;
     private final PostMapper postMapper;
@@ -124,6 +132,17 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements Sh
         shop.setDistrict(req.district() == null ? shop.getDistrict() : req.district().trim());
         shop.setPhone(req.phone() == null ? shop.getPhone() : req.phone().trim());
         shop.setStatus(status);
+        // 营业时间：null 表示不修改，空字符串表示清空不展示；开店时未填给默认值
+        if (req.openTime() != null) {
+            shop.setOpenTime(normalizeTime(req.openTime(), "开始"));
+        } else if (creating) {
+            shop.setOpenTime(DEFAULT_OPEN_TIME);
+        }
+        if (req.closeTime() != null) {
+            shop.setCloseTime(normalizeTime(req.closeTime(), "结束"));
+        } else if (creating) {
+            shop.setCloseTime(DEFAULT_CLOSE_TIME);
+        }
         shop.setUpdateTime(LocalDateTime.now());
 
         if (creating) {
@@ -135,6 +154,11 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements Sh
                     .set(Post::getShopId, shop.getShopId()));
         } else {
             updateById(shop);
+            // updateById 会忽略 null 字段，营业时间可能被清空，所以单独显式写一次
+            baseMapper.update(null, new LambdaUpdateWrapper<Shop>()
+                    .eq(Shop::getShopId, shop.getShopId())
+                    .set(Shop::getOpenTime, shop.getOpenTime())
+                    .set(Shop::getCloseTime, shop.getCloseTime()));
         }
 
         fillStats(List.of(shop));
@@ -162,6 +186,18 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements Sh
                 .eq(Post::getStatus, "approved")
                 .orderByDesc(Post::getCreatedAt)
                 .orderByDesc(Post::getId));
+    }
+
+    /** 校验营业时间格式，返回 null 表示清空 */
+    private String normalizeTime(String raw, String label) {
+        String t = raw == null ? "" : raw.trim();
+        if (t.isEmpty()) {
+            return null;
+        }
+        if (!TIME_PATTERN.matcher(t).matches()) {
+            throw new BizException(400, "营业" + label + "时间格式应为 HH:mm");
+        }
+        return t;
     }
 
     /** 批量回填店主用户名与店内统计（菜品数 / 均分 / 点评数 / 收藏数） */
