@@ -9,6 +9,7 @@ import com.fenglin.springboottest.entity.User;
 import com.fenglin.springboottest.mapper.ChatGroupMapper;
 import com.fenglin.springboottest.mapper.ChatGroupMemberMapper;
 import com.fenglin.springboottest.mapper.ChatGroupMessageMapper;
+import com.fenglin.springboottest.service.FriendService;
 import com.fenglin.springboottest.service.UserService;
 import com.fenglin.springboottest.util.JwtUtil;
 import com.fenglin.springboottest.ws.ChatWsHandler;
@@ -50,16 +51,18 @@ public class ChatGroupController {
     private final ChatGroupMemberMapper memberMapper;
     private final ChatGroupMessageMapper messageMapper;
     private final UserService userService;
+    private final FriendService friendService;
     private final JwtUtil jwtUtil;
     private final ChatWsHandler ws;
 
     public ChatGroupController(ChatGroupMapper groupMapper, ChatGroupMemberMapper memberMapper,
                                ChatGroupMessageMapper messageMapper, UserService userService,
-                               JwtUtil jwtUtil, ChatWsHandler ws) {
+                               FriendService friendService, JwtUtil jwtUtil, ChatWsHandler ws) {
         this.groupMapper = groupMapper;
         this.memberMapper = memberMapper;
         this.messageMapper = messageMapper;
         this.userService = userService;
+        this.friendService = friendService;
         this.jwtUtil = jwtUtil;
         this.ws = ws;
     }
@@ -89,23 +92,15 @@ public class ChatGroupController {
         return m;
     }
 
-    /** 可邀请的用户：除自己外的全部用户（最多 100 个） */
+    /** 可邀请的用户：仅限我的好友（最多 100 个） */
     @GetMapping("/contacts")
     public List<Map<String, Object>> contacts(HttpServletRequest request) {
         Long me = currentUser(request).getId();
-        List<User> users = userService.list(new LambdaQueryWrapper<User>()
-                .ne(User::getId, me)
-                .eq(User::getStatus, "active")
-                .orderByAsc(User::getId)
-                .last("LIMIT 100"));
-        List<Map<String, Object>> res = new ArrayList<>();
-        for (User u : users) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", u.getId());
-            m.put("username", u.getUsername());
-            res.add(m);
+        List<Map<String, Object>> friends = friendService.listFriends(me);
+        if (friends.size() > 100) {
+            friends = friends.subList(0, 100);
         }
-        return res;
+        return friends;
     }
 
     /** 我加入的群列表：GET /api/chat/groups */

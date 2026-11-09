@@ -24,10 +24,20 @@ const wsStatus = ref('offline') // connecting | online | offline
 
 // 新建群聊弹窗
 const showGroupModal = ref(false)
-const contacts = ref([])
+const contacts = ref([])        // 可邀请的好友（建群选人用）
 const groupForm = ref({ groupName: '', emoji: '👥', memberIds: [] })
 const creating = ref(false)
 const GROUP_EMOJIS = ['👥', '🍜', '🍲', '🍣', '🍰', '☕', '🔥', '🌙']
+
+// 好友
+const friends = ref([])         // 我的好友
+const incoming = ref([])        // 收到的待处理申请
+const sent = ref([])            // 我发出的待处理申请
+const showFriendModal = ref(false)
+const friendForm = ref({ username: '' })
+const addingFriend = ref(false)
+const handlingReq = ref(false)
+const pendingCount = computed(() => incoming.value.length)
 
 const API = '/api/chat'
 function h(extra = {}) {
@@ -66,6 +76,78 @@ async function loadContacts() {
     const r = await fetch(`${API}/contacts`, { headers: h() })
     if (r.ok) contacts.value = await r.json()
   } catch { /* 静默 */ }
+}
+
+/* ---------------- 好友 ---------------- */
+async function loadFriends(silent = true) {
+  try {
+    const r = await fetch('/api/friends', { headers: h() })
+    if (r.ok) friends.value = await r.json()
+  } catch { if (!silent) toast('加载好友失败', 'error') }
+}
+
+async function loadPending() {
+  try {
+    const [ri, rs] = await Promise.all([
+      fetch('/api/friends/pending', { headers: h() }),
+      fetch('/api/friends/sent', { headers: h() })
+    ])
+    if (ri.ok) incoming.value = await ri.json()
+    if (rs.ok) sent.value = await rs.json()
+  } catch { /* 静默 */ }
+}
+
+function openFriendModal() {
+  friendForm.value = { username: '' }
+  showFriendModal.value = true
+  loadPending()
+  loadFriends()
+}
+
+async function addFriend() {
+  const name = friendForm.value.username.trim()
+  if (!name) { toast('请输入对方用户名', 'error'); return }
+  addingFriend.value = true
+  try {
+    const r = await fetch('/api/friends', { method: 'POST', headers: h(), body: JSON.stringify({ username: name }) })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok) throw new Error(d.message || '发送申请失败')
+    toast(`已向 @${name} 发出好友申请`, 'success')
+    friendForm.value = { username: '' }
+    loadPending()
+  } catch (e) {
+    toast(e.message, 'error')
+  } finally {
+    addingFriend.value = false
+  }
+}
+
+async function handleRequest(id, action) {
+  handlingReq.value = true
+  try {
+    const r = await fetch(`/api/friends/${id}/${action}`, { method: 'POST', headers: h() })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok) throw new Error(d.message || '操作失败')
+    if (action === 'accept') toast('已同意，你们现在是好友啦', 'success')
+    await Promise.all([loadPending(), loadFriends()])
+  } catch (e) {
+    toast(e.message, 'error')
+  } finally {
+    handlingReq.value = false
+  }
+}
+
+async function removeFriendShip(f) {
+  if (!confirm(`确定删除好友 @${f.username} 吗？双方都会解除关系。`)) return
+  try {
+    const r = await fetch(`/api/friends/by-peer/${f.id}`, { method: 'DELETE', headers: h() })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok) throw new Error(d.message || '删除失败')
+    toast('已删除好友', 'success')
+    loadFriends()
+  } catch (e) {
+    toast(e.message, 'error')
+  }
 }
 
 /* ---------------- 会话切换 ---------------- */
@@ -317,6 +399,26 @@ function handleWsEvent(d) {
     if (activeType.value === 'group' && Number(activeId.value) === Number(d.groupId)) {
       loadGroupDetail(activeId.value)
     }
+    return
+  }
+
+  // 好友相关实时事件
+  if (d.type === 'friend_request') {
+    toast(`${d.fromName || '有人'} 请求加你为好友`, 'info')
+    loadPending()
+    return
+  }
+  if (d.type === 'friend_accepted') {
+    toast(`${d.fromName || '对方'} 已同意你的好友申请`, 'success')
+    loadFriends()
+    return
+  }
+  if (d.type === 'friend_rejected') {
+    loadPending()
+    return
+  }
+  if (d.type === 'friend_removed') {
+    loadFriends()
   }
 }
 
@@ -347,6 +449,8 @@ onMounted(async () => {
   await loadMe()
   await loadSessions()
   await loadGroups()
+  loadFriends()
+  loadPending()
   connectWs()
 
   // 路由参数：/chat?peer=xxx 打开私聊，/chat?group=1 打开群聊
@@ -359,7 +463,7 @@ onMounted(async () => {
   }
 
   // 轮询作为兜底（WebSocket 断开时仍能收到消息）
-  listTimer = setInterval(() => { loadSessions(); loadGroups() }, 12000)
+  listTimer = setInterval(() => { loadSessions(); loadGroups(); loadPending() }, 12000)
   msgTimer = setInterval(() => loadMessages(true), 8000)
 })
 
@@ -385,10 +489,30 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
       <aside class="chat-side">
         <div class="side-head">
           <span>💬 消息</span>
-          <button class="new-group" type="button" @click="openGroupModal">＋ 群聊</button>
+          <span class="head-btns">
+            <button class="new-group" type="button" @click="openFriendModal">＋ 好友<span v-if="pendingCount" class="btn-dot">{{ pendingCount > 9 ? '9+' : pendingCount }}</span></button>
+            <button class="new-group ghost" type="button" @click="openGroupModal">＋ 群聊</button>
+          </span>
         </div>
 
         <div class="side-scroll">
+          <div class="side-cat">好友<span class="cat-count">{{ friends.length }}</span><span v-if="pendingCount" class="cat-badge">{{ pendingCount }} 个申请</span></div>
+          <ul class="s-list">
+            <li v-for="f in friends" :key="'f' + f.id" @click="openByPeerName(f.username)">
+              <span class="s-avatar">{{ (f.username || '?')[0] }}</span>
+              <div class="s-main">
+                <div class="s-top">
+                  <span class="s-name">@{{ f.username }}</span>
+                </div>
+                <div class="s-msg">点这里开始聊天</div>
+              </div>
+              <button class="f-del" type="button" title="删除好友" @click.stop="removeFriendShip(f)">✕</button>
+            </li>
+            <li v-if="!friends.length" class="s-empty">
+              还没有好友<br />点右上角「＋ 好友」输入用户名申请
+            </li>
+          </ul>
+
           <div class="side-cat">私聊<span class="cat-count">{{ sessions.length }}</span></div>
           <ul class="s-list">
             <li
@@ -520,7 +644,7 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
               <span class="m-avatar">{{ (c.username || '?')[0] }}</span>
               <span class="m-name">@{{ c.username }}</span>
             </label>
-            <p v-if="!contacts.length" class="m-empty">暂无可邀请的用户</p>
+            <p v-if="!contacts.length" class="m-empty">暂无好友，先点「＋ 好友」添加吧</p>
           </div>
         </div>
 
@@ -529,6 +653,54 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
           <button class="m-btn primary" type="button" :disabled="creating" @click="createGroup">
             {{ creating ? '创建中…' : '创建群聊' }}
           </button>
+        </div>
+      </div>
+    </div>
+    <!-- 好友管理 -->
+    <div v-if="showFriendModal" class="modal-mask" @click.self="showFriendModal = false">
+      <div class="modal">
+        <h3>好友</h3>
+        <p class="modal-tip">输入对方用户名发出申请，对方同意后互为好友</p>
+
+        <div class="m-field">
+          <span>添加好友</span>
+          <div class="f-add">
+            <input v-model="friendForm.username" maxlength="50" placeholder="对方用户名，回车发送申请" @keydown.enter="addFriend" />
+            <button class="m-btn primary slim" type="button" :disabled="addingFriend" @click="addFriend">
+              {{ addingFriend ? '发送中…' : '发申请' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="m-field">
+          <span>收到的申请（{{ incoming.length }}）</span>
+          <div class="f-reqs">
+            <div v-for="r in incoming" :key="'i' + r.requestId" class="f-req">
+              <span class="m-avatar">{{ (r.peerName || '?')[0] }}</span>
+              <span class="f-req-name">@{{ r.peerName }}<em class="f-req-time">{{ fmtTime(r.createTime) }}</em></span>
+              <span class="f-req-btns">
+                <button class="m-btn primary slim" type="button" :disabled="handlingReq" @click="handleRequest(r.requestId, 'accept')">同意</button>
+                <button class="m-btn ghost slim" type="button" :disabled="handlingReq" @click="handleRequest(r.requestId, 'reject')">拒绝</button>
+              </span>
+            </div>
+            <p v-if="!incoming.length" class="m-empty">暂无收到的申请</p>
+          </div>
+        </div>
+
+        <div class="m-field">
+          <span>我发出的申请（{{ sent.length }}）</span>
+          <div class="f-reqs">
+            <div v-for="r in sent" :key="'s' + r.requestId" class="f-req">
+              <span class="m-avatar">{{ (r.peerName || '?')[0] }}</span>
+              <span class="f-req-name">@{{ r.peerName }}<em class="f-req-time">{{ fmtTime(r.createTime) }}</em></span>
+              <span class="f-wait">等待对方处理…</span>
+            </div>
+            <p v-if="!sent.length" class="m-empty">没有待处理的申请</p>
+          </div>
+        </div>
+
+        <div class="m-actions">
+          <button class="m-btn primary" type="button" @click="showFriendModal = false">完成</button>
         </div>
       </div>
     </div>
@@ -566,6 +738,31 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
 .s-dot{ position:absolute; right:10px; top:8px; min-width:18px; height:18px; padding:0 5px; border-radius:9px;
   background:#ff3b30; color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; }
 .s-empty{ text-align:center; color:#b99b82; font-size:12px; padding:16px 16px 20px; line-height:1.9; cursor:default; }
+
+/* 好友 */
+.head-btns{ display:flex; gap:6px; }
+.new-group.ghost{ background:#fff; color:#8a7a6a; border:1.5px solid #ecdfd2; }
+.new-group.ghost:hover{ border-color:var(--orange,#ff9a52); color:var(--tomato,#ff5f3d); box-shadow:none; }
+.btn-dot{ background:#ff3b30; color:#fff; border-radius:999px; padding:0 5px; font-size:10px; margin-left:4px; }
+.cat-badge{ color:#ff5f3d; font-weight:800; }
+.f-del{ border:none; background:transparent; color:#d9c7b4; font-size:13px; cursor:pointer; padding:4px 6px;
+  border-radius:8px; opacity:0; transition:.2s; flex-shrink:0; }
+.s-list li:hover .f-del{ opacity:1; }
+.f-del:hover{ color:#ff3b30; background:#ffecec; }
+.f-add{ display:flex; gap:8px; }
+.f-add input{ flex:1; border:1.5px solid #ecdfd2; border-radius:12px; padding:9px 13px; font-size:14px;
+  font-family:inherit; outline:none; color:#4a3526; min-width:0; }
+.f-add input:focus{ border-color:var(--orange,#ff9a52); }
+.m-btn.slim{ flex:none; padding:8px 14px; font-size:13px; }
+.f-reqs{ display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto;
+  border:1.5px solid #f4e9dd; border-radius:14px; padding:8px; }
+.f-req{ display:flex; align-items:center; gap:9px; padding:5px 6px; border-radius:10px; }
+.f-req:hover{ background:#fff6ee; }
+.f-req-name{ flex:1; min-width:0; font-size:13px; color:#4a3526; font-weight:700;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.f-req-time{ font-style:normal; font-weight:400; font-size:11px; color:#b99b82; margin-left:7px; }
+.f-req-btns{ display:flex; gap:6px; flex-shrink:0; }
+.f-wait{ font-size:11.5px; color:#b99b82; flex-shrink:0; }
 
 /* 右侧聊天窗口 */
 .chat-main{ flex:1; min-width:0; display:flex; flex-direction:column; }

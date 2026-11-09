@@ -223,6 +223,28 @@ CREATE TABLE `food_order`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for friend
+-- ----------------------------
+DROP TABLE IF EXISTS `friend`;
+CREATE TABLE `friend`  (
+  `friend_id` bigint NOT NULL AUTO_INCREMENT COMMENT '记录ID',
+  `requester_id` bigint NOT NULL COMMENT '发起申请的用户ID',
+  `receiver_id` bigint NOT NULL COMMENT '被申请的用户ID',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'pending' COMMENT '状态：pending=待处理 accepted=已同意 rejected=已拒绝',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '申请时间',
+  `handle_time` datetime NULL DEFAULT NULL COMMENT '处理时间',
+  PRIMARY KEY (`friend_id`) USING BTREE,
+  UNIQUE INDEX `uk_requester_receiver`(`requester_id` ASC, `receiver_id` ASC) USING BTREE,
+  INDEX `idx_receiver`(`receiver_id` ASC) USING BTREE,
+  CONSTRAINT `fk_fr_requester` FOREIGN KEY (`requester_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_fr_receiver` FOREIGN KEY (`receiver_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '好友关系表（一条accepted记录代表双向好友）' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of friend
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for post
 -- ----------------------------
 DROP TABLE IF EXISTS `post`;
