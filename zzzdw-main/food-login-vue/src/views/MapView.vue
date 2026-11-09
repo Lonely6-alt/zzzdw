@@ -54,6 +54,48 @@ const cats = ['全部', ...districts.map(d => d.key)]
 const activeCat = ref('全部')
 const selected = ref(null)
 
+// ---- 真实店铺层：直接读 /api/shops，与数据库里的门店一一对应 ----
+const view = ref('map')          // map=插画地图 / shops=真实店铺
+const shops = ref([])
+const shopsLoading = ref(false)
+const shopsErr = ref('')
+const shopLoaded = ref(false)
+const activeDistrict = ref('')
+
+const shopDistricts = computed(() =>
+  [...new Set(shops.value.map(s => s.district).filter(Boolean))]
+)
+
+const visibleShops = computed(() => {
+  const list = activeDistrict.value
+    ? shops.value.filter(s => s.district === activeDistrict.value)
+    : shops.value
+  // 有菜、评分高的排前面，避免空店铺占满首屏
+  return [...list].sort((a, b) =>
+    (b.postCount || 0) - (a.postCount || 0) || (b.avgRating || 0) - (a.avgRating || 0)
+  )
+})
+
+async function loadShops() {
+  if (shopLoaded.value || shopsLoading.value) return
+  shopsLoading.value = true
+  try {
+    const r = await fetch('/api/shops')
+    if (!r.ok) throw new Error('店铺加载失败')
+    shops.value = await r.json()
+    shopLoaded.value = true
+  } catch (e) {
+    shopsErr.value = e.message
+  } finally {
+    shopsLoading.value = false
+  }
+}
+function switchView(v) {
+  view.value = v
+  if (v === 'shops') loadShops()
+}
+function openShop(s) { router.push(`/shop/${s.shopId}`) }
+
 const visibleSpots = computed(() =>
   activeCat.value === '全部' ? spots : spots.filter(s => s.cat === activeCat.value)
 )
@@ -104,14 +146,20 @@ onMounted(() => {
 
     <header class="mhead">
       <h1>🗺️ 食光城 · 美食地图</h1>
-      <p>24 家宝藏店铺，按区逛吃，点图钉看好评与招牌</p>
+      <p v-if="view === 'map'">24 家宝藏店铺，按区逛吃，点图钉看好评与招牌</p>
+      <p v-else>{{ shops.length }} 家真实门店，按商圈逛逛，点进去看菜单</p>
     </header>
 
-    <nav class="mfilter">
+    <nav class="viewtabs">
+      <button :class="{ on: view === 'map' }" @click="switchView('map')">🗺️ 插画地图</button>
+      <button :class="{ on: view === 'shops' }" @click="switchView('shops')">🏠 真实店铺</button>
+    </nav>
+
+    <nav v-if="view === 'map'" class="mfilter">
       <button v-for="c in cats" :key="c" :class="{ on: activeCat === c }" @click="activeCat = c">{{ c }}</button>
     </nav>
 
-    <div class="map-layout">
+    <div v-if="view === 'map'" class="map-layout">
       <div class="map-canvas">
         <svg class="map-svg" viewBox="0 0 760 660" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
           <rect x="0" y="0" width="760" height="660" rx="28" fill="#f4f8ff" />
@@ -167,7 +215,47 @@ onMounted(() => {
       </aside>
     </div>
 
-    <p class="map-note">* 地图为前端示例数据，便于离线体验；后续可接入真实门店接口。</p>
+    <!-- 真实店铺层：按商圈筛选的真实门店卡片 -->
+    <section v-else class="shops">
+      <p v-if="shopsLoading" class="sp-empty">店铺加载中…</p>
+      <p v-else-if="shopsErr" class="sp-empty">{{ shopsErr }}</p>
+      <template v-else>
+        <div class="district-chips">
+          <button :class="{ on: activeDistrict === '' }" @click="activeDistrict = ''">
+            全部商圈 <em>{{ shops.length }}</em>
+          </button>
+          <button v-for="d in shopDistricts" :key="d"
+                  :class="{ on: activeDistrict === d }" @click="activeDistrict = d">
+            {{ d }}
+            <em>{{ shops.filter(s => s.district === d).length }}</em>
+          </button>
+        </div>
+
+        <div v-if="visibleShops.length" class="shop-grid">
+          <article v-for="s in visibleShops" :key="s.shopId" class="shop-card" @click="openShop(s)">
+            <div class="sc-top">
+              <span class="sc-emoji">{{ s.emoji || '🏠' }}</span>
+              <span class="sc-state" :class="s.status">{{ s.status === 'active' ? '营业中' : '休息中' }}</span>
+            </div>
+            <h3>{{ s.shopName }}</h3>
+            <p class="sc-desc">{{ s.description || '这家店还没写简介～' }}</p>
+            <div class="sc-meta">
+              <span v-if="s.district">📍 {{ s.district }}</span>
+              <span v-if="s.ownerName">👤 @{{ s.ownerName }}</span>
+            </div>
+            <div class="sc-foot">
+              <span class="sc-num">{{ s.postCount ?? 0 }}<small> 道菜</small></span>
+              <span class="sc-stars">★ {{ Number(s.avgRating || 0).toFixed(1) }}</span>
+              <span class="sc-num">{{ s.reviewCount ?? 0 }}<small> 点评</small></span>
+            </div>
+          </article>
+        </div>
+        <p v-else class="sp-empty">这个商圈还没有店铺</p>
+      </template>
+    </section>
+
+    <p class="map-note" v-if="view === 'map'">* 插画地图为前端示例数据，便于离线体验。</p>
+    <p class="map-note" v-else>* 这里展示的是数据库中的真实门店，点卡片可进店看菜单。</p>
   </div>
 </template>
 
@@ -241,10 +329,52 @@ onMounted(() => {
 .sp-same-item:hover{ border-color:var(--orange); color:var(--tomato); }
 .sp-empty{ color:var(--muted); text-align:center; padding:60px 20px; font-size:14px; }
 
+/* 图层切换 */
+.viewtabs{ position:relative; z-index:2; display:flex; gap:8px; margin-bottom:14px; }
+.viewtabs button{ border:1.5px solid #ecdfd2; background:#fff; color:var(--muted);
+  padding:9px 18px; border-radius:20px; font-size:13.5px; font-weight:700; cursor:pointer; transition:.2s; }
+.viewtabs button:hover{ border-color:var(--orange); color:var(--orange); }
+.viewtabs button.on{ background:linear-gradient(120deg,var(--orange),var(--tomato)); border-color:transparent; color:#fff;
+  box-shadow:0 8px 18px rgba(255,90,60,.26); }
+
+/* 真实店铺层 */
+.shops{ position:relative; z-index:2; }
+.district-chips{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+.district-chips button{ border:1.5px solid #ecdfd2; background:#fff; color:var(--muted);
+  padding:7px 14px; border-radius:18px; font-size:13px; font-weight:600; cursor:pointer; transition:.2s; }
+.district-chips button em{ font-style:normal; font-size:11.5px; opacity:.65; margin-left:4px; }
+.district-chips button:hover{ border-color:var(--orange); color:var(--tomato); }
+.district-chips button.on{ background:linear-gradient(120deg,var(--orange),var(--tomato)); border-color:transparent; color:#fff; }
+.district-chips button.on em{ opacity:.85; }
+
+.shop-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.shop-card{ background:#fff; border-radius:18px; padding:18px; cursor:pointer;
+  box-shadow:0 8px 22px rgba(0,0,0,.05); border:1px solid #f6ede2;
+  transition:transform .2s, box-shadow .2s; animation:cardIn .45s backwards; display:flex; flex-direction:column; }
+.shop-card:hover{ transform:translateY(-4px); box-shadow:0 16px 32px rgba(255,90,60,.18); }
+.sc-top{ display:flex; align-items:flex-start; justify-content:space-between; }
+.sc-emoji{ font-size:32px; line-height:1; }
+.sc-state{ font-size:11px; font-weight:800; padding:3px 9px; border-radius:999px; }
+.sc-state.active{ background:#e9f7ee; color:var(--ok); }
+.sc-state.closed{ background:#f1ece5; color:var(--muted); }
+.shop-card h3{ font-size:16px; margin:10px 0 6px; }
+.sc-desc{ font-size:12.5px; color:var(--muted); line-height:1.5; min-height:38px;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.sc-meta{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; font-size:12px; color:var(--muted); }
+.sc-foot{ display:flex; align-items:center; gap:14px; margin-top:12px; padding-top:10px;
+  border-top:1px dashed #f0e6db; font-size:12.5px; color:var(--muted); }
+.sc-num{ font-weight:700; color:var(--ink); }
+.sc-num small{ font-weight:500; color:var(--muted); font-size:11px; }
+.sc-stars{ color:#f5a623; font-weight:700; }
+
 .map-note{ position:relative; z-index:2; margin-top:18px; font-size:12px; color:#b8a99a; text-align:center; }
 
 @media (max-width:820px){
   .map-layout{ grid-template-columns:1fr; }
   .map-canvas{ aspect-ratio:760/720; }
+  .shop-grid{ grid-template-columns:repeat(2,1fr); }
+}
+@media (max-width:520px){
+  .shop-grid{ grid-template-columns:1fr; }
 }
 </style>

@@ -154,6 +154,16 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements Sh
                 .orderByDesc(Post::getId));
     }
 
+    @Override
+    public List<Post> publicPosts(Long shopId) {
+        // 食客视角：只展示已上架的菜品，下架（off）/待审核/驳回一律不出现
+        return postMapper.selectList(new LambdaQueryWrapper<Post>()
+                .eq(Post::getShopId, shopId)
+                .eq(Post::getStatus, "approved")
+                .orderByDesc(Post::getCreatedAt)
+                .orderByDesc(Post::getId));
+    }
+
     /** 批量回填店主用户名与店内统计（菜品数 / 均分 / 点评数 / 收藏数） */
     private void fillStats(List<Shop> shops) {
         if (shops == null || shops.isEmpty()) {

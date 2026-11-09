@@ -33,4 +33,7 @@ public interface ShopService extends IService<Shop> {
 
     /** 某用户名名下店铺的全部菜品（含待审核，按发布时间倒序）；未开店返回空列表 */
     List<Post> myPosts(String username);
+
+    /** 店铺公开菜品（仅 status=approved，食客视角，按发布时间倒序） */
+    List<Post> publicPosts(Long shopId);
 }

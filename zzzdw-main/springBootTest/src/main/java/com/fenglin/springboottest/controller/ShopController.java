@@ -52,6 +52,14 @@ public class ShopController {
         return shopService.detail(id);
     }
 
+    /** 店铺公开菜品（仅已上架）：GET /api/shops/1/posts */
+    @GetMapping("/shops/{id}/posts")
+    public List<Post> shopPosts(@PathVariable Long id) {
+        // 店铺不存在时先抛 404，避免返回空数组让人误以为「店里没菜」
+        shopService.detail(id);
+        return shopService.publicPosts(id);
+    }
+
     /**
      * 我的店铺：GET /api/shop，需要登录。
      * 未开店返回 { "opened": false }（用 200 而非 404，方便前端直接渲染开店引导）；
