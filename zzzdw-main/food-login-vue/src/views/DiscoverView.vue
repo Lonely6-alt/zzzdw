@@ -10,6 +10,12 @@ import { useOrder } from '../composables/useOrder.js'
 import { catBg } from '../data/categories.js'
 
 const router = useRouter()
+
+// 返回上一个页面；直接进入本页没有历史时才回首页
+function goBack() {
+  if (window.history.state && window.history.state.back != null) router.back()
+  else router.push('/')
+}
 const { avgRating, count: reviewCount } = useReviews()
 const { isFav, toggle } = useFavorites()
 const { openOrder } = useOrder()
@@ -46,6 +52,21 @@ const SCENES = [
     key: 'light', icon: '🌿', name: '轻体期', desc: '吃得清爽也照样满足',
     bg: 'linear-gradient(135deg,#2f7a4d 0%,#5cb47a 100%)',
     kw: ['低卡', '健身', '减脂', '轻食', '沙拉', '蛋白', '能量', '蔬菜', '热量', '清爽', '控糖', '牛油果', '藜麦', '羽衣', '波奇', '果昔', '运动']
+  },
+  {
+    key: 'breakfast', icon: '🌅', name: '早班车', desc: '一天的好心情从早餐开始',
+    bg: 'linear-gradient(135deg,#c78a2d 0%,#f0b45c 100%)',
+    kw: ['早餐', '早饭', '早班', '豆浆', '油条', '包子', '馒头', '粥', '肠粉', '煎饼', '烧饼', '粢饭', '茶叶蛋', '早茶', '虾饺', '凤爪', '烧麦', '可颂', '贝果', '麦芬', '早晨', '清晨', '元气', '开工']
+  },
+  {
+    key: 'date', icon: '💘', name: '约会夜', desc: '灯光刚好，气氛也刚好',
+    bg: 'linear-gradient(135deg,#a03a6b 0%,#e06b9a 100%)',
+    kw: ['约会', '表白', '纪念日', '情人节', '情侣', '浪漫', '烛光', '氛围', '适合拍照', '出片', '夜景', '露台', '江景', '日落', '落日', '香槟', '红酒', '好喝的酒', '两个人', '窗边', '灯光', '精致', '仪式感']
+  },
+  {
+    key: 'feast', icon: '🍖', name: '硬菜局', desc: '今天不装了，放开了吃',
+    bg: 'linear-gradient(135deg,#8f3b1f 0%,#d95b2b 100%)',
+    kw: ['硬菜', '大口', '过瘾', '肉食', '牛肉', '羊肉', '排骨', '烤肉', '红烧肉', '肘子', '蹄髈', '牛排', '羊排', '鸡腿', '烤鱼', '剁椒', '辣', '香辣', '麻辣', '干锅', '招牌菜', '镇店', '分量', '实在', '满足', '扶墙']
   }
 ]
 
@@ -189,7 +210,7 @@ onUnmounted(() => clearTimeout(rollTimer))
     </div>
 
     <div class="topbar">
-      <button class="back" @click="router.push('/')">← 返回广场</button>
+      <button class="back" @click="goBack">← 返回广场</button>
       <div class="top-right">
         <button class="mine" @click="router.push('/ranking')">排行榜</button>
         <button class="mine" @click="router.push('/map')">美食地图</button>

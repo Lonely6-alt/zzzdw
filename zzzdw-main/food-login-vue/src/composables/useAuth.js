@@ -4,8 +4,11 @@ import { ref } from 'vue'
 const API = '/api'
 const TOKEN_KEY = 'food_token'
 const ROLE_KEY = 'food_role'
+const PERM_KEY = 'food_perm'
 export const authUser = ref(localStorage.getItem(TOKEN_KEY) ? (localStorage.getItem('food_user') || '') : '')
 export const authRole = ref(localStorage.getItem(ROLE_KEY) || '')
+// 用户权限：1=默认用户，0=管理员（只有 0 才能看到后台管理按钮）
+export const authPerm = ref(localStorage.getItem(TOKEN_KEY) ? Number(localStorage.getItem(PERM_KEY) ?? 1) : 1)
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
@@ -16,7 +19,12 @@ export function setToken(t) {
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY)
   localStorage.removeItem(ROLE_KEY)
+  localStorage.removeItem(PERM_KEY)
   localStorage.removeItem('food_user')
+}
+function setPerm(p) {
+  authPerm.value = Number(p ?? 1)
+  localStorage.setItem(PERM_KEY, String(authPerm.value))
 }
 function setRole(r) {
   authRole.value = r || ''
@@ -73,6 +81,7 @@ export async function login({ username, password }) {
   setToken(d.token)
   setUser(d.user.username)
   setRole(d.user.role)
+  setPerm(d.user.perm)
   return d
 }
 
@@ -81,6 +90,7 @@ export async function register(payload) {
   setToken(d.token)
   setUser(d.user.username)
   setRole(d.user.role)
+  setPerm(d.user.perm)
   return d
 }
 
@@ -88,6 +98,7 @@ export function logout() {
   clearToken()
   authUser.value = ''
   authRole.value = ''
+  authPerm.value = 1
 }
 
 // 启动时校验 token 是否有效，并同步角色
@@ -97,6 +108,7 @@ export async function ensureSession() {
     const d = await apiMe()
     setUser(d.user.username)
     setRole(d.user.role)
+    setPerm(d.user.perm)
     return true
   } catch {
     logout()

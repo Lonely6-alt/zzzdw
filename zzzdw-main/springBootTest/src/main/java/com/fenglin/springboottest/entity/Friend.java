@@ -22,8 +22,14 @@ public class Friend {
     /** 发起申请的用户 ID，对应列 requester_id */
     private Long requesterId;
 
+    /** 发起人用户名（冗余列，方便在数据库里直接查看是谁） */
+    private String requesterName;
+
     /** 被申请的用户 ID，对应列 receiver_id */
     private Long receiverId;
+
+    /** 被申请人用户名（冗余列，方便在数据库里直接查看是谁） */
+    private String receiverName;
 
     /** 状态：pending=待处理，accepted=已同意，rejected=已拒绝 */
     private String status;
@@ -33,6 +39,9 @@ public class Friend {
 
     /** 处理时间（同意/拒绝时写入） */
     private LocalDateTime handleTime;
+
+    /** 修改日期（数据库 ON UPDATE CURRENT_TIMESTAMP 自动维护） */
+    private LocalDateTime updatedAt;
 
     /** 非库字段：对方用户名（前端展示用） */
     @com.baomidou.mybatisplus.annotation.TableField(exist = false)

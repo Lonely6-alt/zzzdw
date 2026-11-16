@@ -34,4 +34,8 @@ public class FoodOrder {
     /** 下单时间 */
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
+
+    /** 修改日期（数据库 ON UPDATE CURRENT_TIMESTAMP 自动维护） */
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime updatedAt;
 }

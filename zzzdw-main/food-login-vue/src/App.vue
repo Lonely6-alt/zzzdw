@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { authUser, ensureSession, logout } from './composables/useAuth.js'
+import { authUser, authPerm, ensureSession, logout } from './composables/useAuth.js'
 import { isAdmin } from './composables/useAdminAuth.js'
 import { useToast } from './composables/useToast.js'
 import ToastHost from './components/ToastHost.vue'
@@ -19,6 +19,9 @@ const scrolled = ref(false)
 function onScroll() { scrolled.value = window.scrollY > 24 }
 const avatarChar = computed(() => (authUser.value || '?').trim().charAt(0).toUpperCase())
 
+// 后台管理入口：仅「哈哈哈」账号（管理员权限 perm=0）显示，其他任何账号都看不到
+const canAdmin = computed(() => authPerm.value === 0 && authUser.value === '哈哈哈')
+
 // 当前激活的导航项（用 path 前缀匹配，支持 /post 等子页高亮）
 function isActive(p) {
   if (p === '/') return route.path === '/'
@@ -32,7 +35,7 @@ function onLogout() {
   logout()
   router.push('/login')
 }
-// 后台管理：所有人可见；管理员点击直接进后台，普通用户跳后台登录页
+// 后台管理：仅 admin 账号可见，点击直接进后台
 function onAdmin() {
   if (isAdmin.value) router.push('/admin')
   else router.push('/admin/login')
@@ -84,7 +87,7 @@ function startUnreadPoll() {
             <span v-if="unreadCount > 0" class="unread-dot">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
           </button>
           <button :class="{ on: isActive('/profile') }" @click="go('/profile')">我的</button>
-          <button class="admin" @click="onAdmin">🛠 后台管理</button>
+          <button v-if="canAdmin" class="admin" title="后台管理" @click="onAdmin">🛠 后台管理</button>
         </nav>
 
         <div class="right">

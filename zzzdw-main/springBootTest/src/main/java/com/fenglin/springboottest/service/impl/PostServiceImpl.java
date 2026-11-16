@@ -262,9 +262,15 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
 
         boolean favorited;
         if (exist == null) {
+            Post post = getById(postId);
             Favorite f = new Favorite();
             f.setUserId(userId);
             f.setPostId(postId);
+            // 冗余写入商家名称，数据库里不用查 post/shop 表也能看清收藏的是哪家店
+            if (post.getShopId() != null) {
+                Shop shop = shopMapper.selectById(post.getShopId());
+                f.setShopName(shop == null ? null : shop.getShopName());
+            }
             f.setCreatedAt(LocalDateTime.now());
             favoriteService.save(f);
             favorited = true;

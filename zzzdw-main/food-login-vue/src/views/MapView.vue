@@ -45,14 +45,38 @@ const spots = [
   { id: 20, name: '老李烤串', emoji: '🍖', district: '夜宵烧烤', cat: '烧烤夜宵', x: 250, y: 592, rating: 4.5, dish: '孜然羊肉串', address: '夜宵烧烤 11 号', desc: '老板撒料毫不手软，孜然和辣椒面香得三条街外都闻得到。' },
   { id: 21, name: '蚝门夜档', emoji: '🦪', district: '夜宵烧烤', cat: '烧烤夜宵', x: 165, y: 618, rating: 4.6, dish: '蒜蓉烤生蚝', address: '夜宵烧烤 18 号', desc: '生蚝现开现烤，蒜蓉铺得满满当当，汁水在壳里咕嘟作响。' },
 
+  { id: 25, name: '山城小面', emoji: '🌶️', district: '老城面巷', cat: '面食控', x: 105, y: 60, rating: 4.5, dish: '豌杂小面', address: '老城面巷 33 号', desc: '豌豆耙软、杂酱焦香，红油辣子是现舂的，拌开就是老重庆的早晨。' },
+  { id: 26, name: '渔火船屋', emoji: '🚤', district: '海湾日料', cat: '日料局', x: 685, y: 65, rating: 4.6, dish: '帆立贝炙烧', address: '海湾码头 1 号', desc: '开在船屋里的居酒屋，帆立贝现点现炙，配上港风海风，氛围感拉满。' },
+  { id: 27, name: '碳水俱乐部', emoji: '🥖', district: '炸鸡广场', cat: '汉堡炸鸡', x: 330, y: 215, rating: 4.4, dish: '黄油可颂堡', address: '炸鸡广场 21 号', desc: '可颂做汉堡胚，咬下去黄油簌簌掉渣，肉汁浸进酥皮里太犯规。' },
+  { id: 28, name: '森之便当', emoji: '🍱', district: '轻食绿洲', cat: '轻食沙拉', x: 415, y: 255, rating: 4.5, dish: '彩虹能量便当', address: '轻食绿洲 30 号', desc: '一天只做 60 份的手作便当，五色配菜不重样，打工人的快乐盒子。' },
+  { id: 29, name: '布丁车站', emoji: '🍮', district: '甜心巷', cat: '甜品时间', x: 355, y: 370, rating: 4.6, dish: '烤布蕾火车便当', address: '甜心巷 1 号', desc: '把甜品装进小火车造型的盒子，焦糖脆壳敲下去咔嚓一声，幸福感具象化。' },
+  { id: 30, name: '豆波跑道', emoji: '🧋', district: '咖啡街角', cat: '咖啡馆', x: 715, y: 400, rating: 4.5, dish: '桂花酒酿奶茶', address: '咖啡街角 28 号', desc: '酒酿桂花打底，茶底现萃，喝到最后能嚼到圆滚滚的小丸子。' },
+  { id: 31, name: '深夜食堂', emoji: '🍜', district: '夜宵烧烤', cat: '烧烤夜宵', x: 105, y: 545, rating: 4.8, dish: '猫饭茶泡饭', address: '夜宵烧烤 25 号', desc: '凌晨一点还亮灯的小店，老板只有一道菜谱：随心情变化的茶泡饭。' },
+  { id: 32, name: '牛潮码头', emoji: '🐂', district: '火锅江湖', cat: '火锅江湖', x: 715, y: 550, rating: 4.6, dish: '吊龙伴牛杂锅', address: '火锅江湖 31 号', desc: '每天只进两头的潮汕黄牛，牛杂锅免费续汤，吃到扶墙才肯走。' },
+
   { id: 22, name: '山城老灶', emoji: '🍲', district: '火锅江湖', cat: '火锅江湖', x: 470, y: 558, rating: 4.8, dish: '牛油九宫格', address: '火锅江湖 2 号', desc: '牛油锅底翻滚着红汤，毛肚七上八下十五秒，辣到冒汗也停不下来。' },
   { id: 23, name: '番茄暖锅', emoji: '🍅', district: '火锅江湖', cat: '火锅江湖', x: 600, y: 592, rating: 4.5, dish: '番茄牛腩锅', address: '火锅江湖 15 号', desc: '番茄熬到起沙，汤底酸甜浓稠，先喝汤再涮肉，不吃辣也能尽兴。' },
   { id: 24, name: '潮牛铺', emoji: '🥩', district: '火锅江湖', cat: '火锅江湖', x: 540, y: 618, rating: 4.7, dish: '手打牛肉丸', address: '火锅江湖 26 号', desc: '吊龙、匙柄按部位分开涮，每个部位都有最佳秒数，牛肉丸弹牙到能弹上桌。' }
 ]
 
-const cats = ['全部', ...districts.map(d => d.key)]
-const activeCat = ref('全部')
 const selected = ref(null)
+// 「查看相关美食」不再跳首页：直接在面板里展开相关内容
+const showRelated = ref(false)
+
+// 相关美食 = 同美食分类的其他点位（跨区聚合），按评分倒序
+const relatedSpots = computed(() => {
+  if (!selected.value) return []
+  return spots
+    .filter(s => s.cat === selected.value.cat && s.id !== selected.value.id)
+    .sort((a, b) => b.rating - a.rating)
+})
+
+// 换点位时收起相关内容，避免上一家的数据残留
+function pickSpot(s) {
+  if (selected.value && selected.value.id === s.id) return
+  selected.value = s
+  showRelated.value = false
+}
 
 // ---- 真实店铺层：直接读 /api/shops，与数据库里的门店一一对应 ----
 const view = ref('map')          // map=插画地图 / shops=真实店铺
@@ -96,12 +120,7 @@ function switchView(v) {
 }
 function openShop(s) { router.push(`/shop/${s.shopId}`) }
 
-const visibleSpots = computed(() =>
-  activeCat.value === '全部' ? spots : spots.filter(s => s.cat === activeCat.value)
-)
-function zoneActive(d) {
-  return activeCat.value === '全部' || d.key === activeCat.value
-}
+const visibleSpots = computed(() => spots)
 function pinPos(s) {
   return { left: (s.x / 760 * 100) + '%', top: (s.y / 660 * 100) + '%' }
 }
@@ -112,8 +131,14 @@ function starStr(n) {
 function sameDistrict(s) {
   return spots.filter(o => o.district === s.district && o.id !== s.id)
 }
-function goRelated(s) {
-  router.push({ path: '/', query: { cat: s.cat } })
+// 面板内查看相关美食内容，不跳转首页
+function toggleRelated() {
+  showRelated.value = !showRelated.value
+}
+// 返回上一个页面；直接进入本页没有历史时才回首页
+function goBack() {
+  if (window.history.state && window.history.state.back != null) router.back()
+  else router.push('/')
 }
 function goProfile() {
   router.push('/profile')
@@ -137,7 +162,7 @@ onMounted(() => {
     </div>
 
     <div class="topbar">
-      <button class="back" @click="router.push('/')">← 返回广场</button>
+      <button class="back" @click="goBack">← 返回广场</button>
       <div class="top-right">
         <button class="mine" @click="goRanking">排行榜</button>
         <button class="mine" @click="goProfile">我的</button>
@@ -146,7 +171,7 @@ onMounted(() => {
 
     <header class="mhead">
       <h1>🗺️ 食光城 · 美食地图</h1>
-      <p v-if="view === 'map'">24 家宝藏店铺，按区逛吃，点图钉看好评与招牌</p>
+      <p v-if="view === 'map'">{{ spots.length }} 家宝藏店铺，按区逛吃，点图钉看好评与招牌</p>
       <p v-else>{{ shops.length }} 家真实门店，按商圈逛逛，点进去看菜单</p>
     </header>
 
@@ -155,17 +180,39 @@ onMounted(() => {
       <button :class="{ on: view === 'shops' }" @click="switchView('shops')">🏠 真实店铺</button>
     </nav>
 
-    <nav v-if="view === 'map'" class="mfilter">
-      <button v-for="c in cats" :key="c" :class="{ on: activeCat === c }" @click="activeCat = c">{{ c }}</button>
-    </nav>
-
     <div v-if="view === 'map'" class="map-layout">
       <div class="map-canvas">
         <svg class="map-svg" viewBox="0 0 760 660" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
           <rect x="0" y="0" width="760" height="660" rx="28" fill="#f4f8ff" />
           <path d="M0,250 C160,210 300,300 460,250 S720,210 760,260 L760,300 C700,260 540,320 400,280 S140,250 0,300 Z" fill="#dceefc" opacity=".7" />
+          <!-- 新增装饰：小河上的船、街心公园、口袋公园、行道树、灯塔 -->
+          <path d="M0,250 C160,210 300,300 460,250 S720,210 760,260" fill="none" stroke="#b9dcf3" stroke-width="3" opacity=".8" />
+          <text x="596" y="248" font-size="22">⛵</text>
+          <text x="268" y="258" font-size="15" opacity=".8">🦆</text>
+          <g opacity=".9">
+            <circle cx="384" cy="222" r="17" fill="#cdeccf" />
+            <circle cx="374" cy="216" r="5" fill="#9fd8a4" />
+            <circle cx="392" cy="214" r="6" fill="#8ecf94" />
+            <circle cx="384" cy="228" r="4.5" fill="#9fd8a4" />
+            <text x="376" y="247" font-size="9" fill="#7ba981">街心公园</text>
+          </g>
+          <g opacity=".85">
+            <circle cx="358" cy="530" r="14" fill="#d4f0d6" />
+            <circle cx="350" cy="526" r="4.5" fill="#9fd8a4" />
+            <circle cx="364" cy="524" r="5" fill="#8ecf94" />
+            <text x="348" y="550" font-size="9" fill="#7ba981">口袋公园</text>
+          </g>
+          <g opacity=".8">
+            <rect x="736" y="196" width="5" height="18" rx="2" fill="#f3c9b8" />
+            <circle cx="738" cy="194" r="7" fill="#ffd0ba" />
+          </g>
+          <text x="24" y="146" font-size="13">🌳</text>
+          <text x="336" y="150" font-size="12">🌲</text>
+          <text x="726" y="640" font-size="13">🌲</text>
+          <text x="40" y="640" font-size="12">🌳</text>
+          <text x="452" y="145" font-size="11">🗼</text>
           <g v-for="d in districts" :key="d.key">
-            <rect :x="d.x" :y="d.y" :width="d.w" :height="d.h" rx="22" :fill="d.fill" :opacity="zoneActive(d) ? 1 : .3" stroke="#ffffff" stroke-width="2" />
+            <rect :x="d.x" :y="d.y" :width="d.w" :height="d.h" rx="22" :fill="d.fill" opacity="1" stroke="#ffffff" stroke-width="2" />
             <text :x="d.x + 18" :y="d.y + 30" font-size="15" font-weight="800" fill="#7a6a5d">{{ d.name }}</text>
             <text :x="d.x + 18" :y="d.y + 50" font-size="11" fill="#a99a8c">{{ d.key }}</text>
           </g>
@@ -181,7 +228,7 @@ onMounted(() => {
           class="pin"
           :class="{ on: selected && selected.id === s.id }"
           :style="pinPos(s)"
-          @click="selected = s"
+          @click="pickSpot(s)"
         >
           <span class="pin-emoji">{{ s.emoji }}</span>
           <span class="pin-tip">{{ s.name }} · {{ s.rating }}★</span>
@@ -200,12 +247,37 @@ onMounted(() => {
           <div class="sp-row"><b>招牌</b>{{ selected.dish }}</div>
           <div class="sp-row"><b>地址</b>{{ selected.address }}</div>
           <p class="sp-desc">{{ selected.desc }}</p>
-          <button class="sp-btn" @click="goRelated(selected)">查看相关美食 →</button>
+          <button class="sp-btn" @click="toggleRelated">
+            {{ showRelated ? '收起相关美食 ↑' : `查看相关美食（${relatedSpots.length} 家同分类） ↓` }}
+          </button>
+
+          <!-- 相关美食内容：直接在面板内展开，不再跳转首页 -->
+          <div v-if="showRelated" class="sp-related">
+            <div class="sp-rel-head">
+              <span class="sp-rel-tag">{{ selected.cat }}</span>
+              <span class="sp-rel-sub">食光城里还有 {{ relatedSpots.length }} 家同分类好店</span>
+            </div>
+            <button
+              v-for="r in relatedSpots"
+              :key="'r' + r.id"
+              class="sp-rel-item"
+              :class="{ top: r.rating >= 4.8 }"
+              @click="pickSpot(r)"
+            >
+              <span class="sp-rel-emoji">{{ r.emoji }}</span>
+              <span class="sp-rel-info">
+                <b>{{ r.name }}</b>
+                <small>📍 {{ r.district }} · 招牌 {{ r.dish }}</small>
+              </span>
+              <span class="sp-rel-rating">★ {{ r.rating.toFixed(1) }}</span>
+            </button>
+            <p v-if="!relatedSpots.length" class="sp-rel-empty">这个分类目前只有这一家，去别的区逛逛吧～</p>
+          </div>
 
           <div class="sp-same">
             <div class="sp-same-title">同区推荐</div>
             <div class="sp-same-list">
-              <button v-for="o in sameDistrict(selected)" :key="o.id" class="sp-same-item" @click="selected = o">
+              <button v-for="o in sameDistrict(selected)" :key="o.id" class="sp-same-item" @click="pickSpot(o)">
                 {{ o.emoji }} {{ o.name }}
               </button>
             </div>
@@ -279,12 +351,6 @@ onMounted(() => {
 .mhead h1{ font-size:26px; font-weight:800; }
 .mhead p{ margin-top:6px; color:var(--muted); font-size:14px; }
 
-.mfilter{ position:relative; z-index:2; display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
-.mfilter button{ border:1.5px solid #ecdfd2; background:#fff; color:var(--muted);
-  padding:8px 16px; border-radius:20px; font-size:13.5px; font-weight:600; cursor:pointer; transition:.2s; }
-.mfilter button:hover{ border-color:var(--orange); color:var(--orange); }
-.mfilter button.on{ background:linear-gradient(120deg,var(--orange),var(--tomato)); border-color:transparent; color:#fff; }
-
 .map-layout{ position:relative; z-index:2; display:grid; grid-template-columns:1.7fr 1fr; gap:18px; align-items:start; }
 
 .map-canvas{ position:relative; border-radius:22px; overflow:hidden; box-shadow:0 16px 40px rgba(255,90,60,.12);
@@ -321,6 +387,23 @@ onMounted(() => {
 .sp-btn{ width:100%; border:0; border-radius:12px; padding:11px; font-weight:700; color:#fff; cursor:pointer;
   background:linear-gradient(120deg,var(--orange),var(--tomato)); box-shadow:0 8px 18px rgba(255,90,60,.3); transition:.2s; }
 .sp-btn:hover{ filter:brightness(1.05); }
+.sp-related{ margin-top:14px; border:1.5px solid #fff0ea; background:#fffaf6; border-radius:16px; padding:14px; }
+.sp-rel-head{ display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+.sp-rel-tag{ font-size:12px; font-weight:800; color:#fff; background:linear-gradient(120deg,var(--orange),var(--tomato)); padding:3px 10px; border-radius:10px; }
+.sp-rel-sub{ font-size:12px; color:var(--muted); }
+.sp-rel-item{ display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+  background:#fff; border:1.5px solid #f6ebe0; border-radius:13px; padding:9px 11px; margin-bottom:8px;
+  cursor:pointer; transition:.2s; font-family:inherit; }
+.sp-rel-item:last-of-type{ margin-bottom:0; }
+.sp-rel-item:hover{ border-color:var(--orange); transform:translateX(3px); box-shadow:0 8px 16px rgba(255,90,60,.12); }
+.sp-rel-item.top{ border-color:#ffd9bf; background:#fff7ef; }
+.sp-rel-emoji{ font-size:22px; flex-shrink:0; }
+.sp-rel-info{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.sp-rel-info b{ font-size:13.5px; }
+.sp-rel-info small{ font-size:11.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sp-rel-rating{ font-size:12.5px; font-weight:800; color:var(--tomato); flex-shrink:0; }
+.sp-rel-item.top .sp-rel-rating::after{ content:" 顶"; font-size:10px; color:#e8a23c; font-weight:700; }
+.sp-rel-empty{ font-size:12.5px; color:var(--muted); text-align:center; padding:10px 0 2px; }
 .sp-same{ margin-top:18px; border-top:1px dashed #ecdfd2; padding-top:14px; }
 .sp-same-title{ font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:8px; }
 .sp-same-list{ display:flex; flex-wrap:wrap; gap:8px; }

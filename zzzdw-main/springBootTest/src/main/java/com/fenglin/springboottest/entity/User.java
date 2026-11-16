@@ -21,11 +21,19 @@ public class User {
     /** 用户名（唯一） */
     private String username;
 
-    /** BCrypt 密码哈希，对应列 password_hash */
+    /** 密码（现按需求明文存储；历史 bcrypt 数据登录时兼容校验），对应列 password_hash */
     private String passwordHash;
 
     /** 角色：user=普通用户，admin=管理员（后台管理系统专用） */
     private String role;
+
+    /** 权限：1=默认用户（看不到后台按钮、进不了后台），0=管理员（可用后台管理） */
+    private Integer perm;
+
+    /** 是否管理员权限（perm=0 视为管理员） */
+    public boolean isAdminPerm() {
+        return perm != null && perm == 0;
+    }
 
     /** 账号状态：active=正常，disabled=禁用（后台用户管理可切换） */
     private String status;

@@ -120,6 +120,10 @@ public class FriendServiceImpl implements FriendService {
         Friend f = new Friend();
         f.setRequesterId(meId);
         f.setReceiverId(peer.getId());
+        // 冗余写入双方用户名，数据库里不用查 user 表也能看清好友关系是谁和谁
+        User meUser = userService.getById(meId);
+        f.setRequesterName(meUser == null ? "" : meUser.getUsername());
+        f.setReceiverName(peer.getUsername());
         f.setStatus(STATUS_PENDING);
         f.setCreateTime(LocalDateTime.now());
         friendMapper.insert(f);
@@ -148,6 +152,11 @@ public class FriendServiceImpl implements FriendService {
         }
         f.setStatus(STATUS_ACCEPTED);
         f.setHandleTime(LocalDateTime.now());
+        // 同意时刷新冗余用户名，避免改名后数据库里还是旧名字
+        User requester = userService.getById(f.getRequesterId());
+        User receiver = userService.getById(f.getReceiverId());
+        f.setRequesterName(requester == null ? f.getRequesterName() : requester.getUsername());
+        f.setReceiverName(receiver == null ? f.getReceiverName() : receiver.getUsername());
         friendMapper.updateById(f);
         // 实时通知申请人
         Map<String, Object> event = new HashMap<>();

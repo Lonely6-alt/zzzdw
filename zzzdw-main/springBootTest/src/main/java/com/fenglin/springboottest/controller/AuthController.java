@@ -42,7 +42,7 @@ public class AuthController {
         this.jwtUtil = jwtUtil;
     }
 
-    /** 注册：校验（含验证码）-> 查重 -> BCrypt 加密入库 -> 自动返回 token（注册即登录） */
+    /** 注册：校验（含验证码）-> 查重 -> 密码明文入库 -> 自动返回 token（注册即登录）；注册用户一律默认权限 perm=1 */
     @PostMapping("/register")
     public AuthVO register(@RequestBody RegisterRequest req) {
         String username = trim(req.username());
@@ -61,14 +61,17 @@ public class AuthController {
 
         User user = new User();
         user.setUsername(username);
-        user.setPasswordHash(encoder.encode(password));
+        // 按需求密码明文存储，不加密
+        user.setPasswordHash(password);
+        user.setRole("user");
+        user.setPerm(1);
         user.setCreatedAt(LocalDateTime.now());
         userService.save(user);
 
-        return new AuthVO(jwtUtil.createToken(username), new UserVO(user.getId(), username, "user"));
+        return new AuthVO(jwtUtil.createToken(username), new UserVO(user.getId(), username, "user", 1));
     }
 
-    /** 登录：先校验验证码，再按用户名查询并校验 BCrypt 密码 */
+    /** 登录：先校验验证码，再按用户名查询并校验密码（明文直比，兼容历史 bcrypt 数据） */
     @PostMapping("/login")
     public AuthVO login(@RequestBody LoginRequest req) {
         String username = trim(req.username());
@@ -82,14 +85,18 @@ public class AuthController {
             captchaService.verify(req.captchaId(), req.captchaCode());
         }
         User user = userService.findByUsername(username);
-        if (user == null || !encoder.matches(password, user.getPasswordHash())) {
+        // 明文密码直接比对；老账号库里还是 bcrypt 哈希，用 encoder 兜底兼容
+        boolean pwdOk = password.equals(user == null ? "" : user.getPasswordHash())
+                || (user != null && encoder.matches(password, user.getPasswordHash()));
+        if (user == null || !pwdOk) {
             throw new BizException(401, "用户名或密码不正确");
         }
         if ("disabled".equals(user.getStatus())) {
             throw new BizException(403, "该账号已被禁用，请联系管理员");
         }
-        // 角色写入 token，供 /api/admin/** 鉴权使用
-        return new AuthVO(jwtUtil.createToken(user.getUsername(), user.getRole()), UserVO.of(user));
+        // 角色由权限字段决定：perm=0 才是管理员，token 写入对应角色供 /api/admin/** 鉴权
+        String role = user.isAdminPerm() ? "admin" : "user";
+        return new AuthVO(jwtUtil.createToken(user.getUsername(), role), UserVO.of(user));
     }
 
     /** 当前登录用户：需要请求头 Authorization: Bearer <token> */

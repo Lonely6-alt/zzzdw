@@ -7,6 +7,12 @@ import { authUser } from '../composables/useAuth.js'
 
 const route = useRoute()
 const router = useRouter()
+
+// 返回上一个页面；直接打开详情链接没有历史时才回首页
+function goBack() {
+  if (window.history.state && window.history.state.back != null) router.back()
+  else router.push('/')
+}
 const post = ref(null)
 const notFound = ref(false)
 const loading = ref(false)
@@ -62,7 +68,7 @@ function starStr(n) {
     </div>
 
     <div class="topbar">
-      <button class="back" @click="router.push('/')">← 返回广场</button>
+      <button class="back" @click="goBack">← 返回广场</button>
       <div class="top-right">
         <button class="mine" @click="goMap">美食地图</button>
         <button class="mine" @click="goRanking">排行榜</button>

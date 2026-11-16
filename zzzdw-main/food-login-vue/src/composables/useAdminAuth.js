@@ -32,7 +32,7 @@ export function clearAdminToken() {
   sync()
 }
 
-// 管理员登录：复用 /api/login，后端返回 role，非 admin 拒绝
+// 管理员登录：复用 /api/login，后端返回 role；只有权限 perm=0（管理员权限）的账号允许进入后台
 export async function adminLogin({ username, password }) {
   const r = await fetch('/api/login', {
     method: 'POST',
@@ -42,6 +42,7 @@ export async function adminLogin({ username, password }) {
   const data = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(data.message || '登录失败')
   if (data.user?.role !== 'admin') throw new Error('该账号不是管理员')
+  if (Number(data.user?.perm ?? 1) !== 0) throw new Error('该账号没有管理员权限，无法登录后台')
   setAdminToken(data.token)
   return data
 }

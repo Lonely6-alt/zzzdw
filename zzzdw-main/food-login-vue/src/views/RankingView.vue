@@ -6,6 +6,12 @@ import { useReviews } from '../composables/useReviews.js'
 import { catIcon, catBg } from '../data/categories.js'
 
 const router = useRouter()
+
+// 返回上一个页面；直接进入本页没有历史时才回首页
+function goBack() {
+  if (window.history.state && window.history.state.back != null) router.back()
+  else router.push('/')
+}
 const { ids: favIds } = useFavorites()
 const { avgRating, count: reviewCount } = useReviews()
 
@@ -80,7 +86,7 @@ onMounted(loadPosts)
     </div>
 
     <div class="topbar">
-      <button class="back" @click="router.push('/')">← 返回广场</button>
+      <button class="back" @click="goBack">← 返回广场</button>
       <div class="top-right">
         <button class="mine" @click="goMap">美食地图</button>
         <button class="mine" @click="goProfile">我的</button>

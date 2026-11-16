@@ -125,8 +125,11 @@ public class AdminController {
         }
         User u = new User();
         u.setUsername(username);
-        u.setPasswordHash(encoder.encode(password));
-        u.setRole("admin".equals(body.get("role")) ? "admin" : "user");
+        // 按需求密码明文存储
+        u.setPasswordHash(password);
+        boolean admin = "admin".equals(body.get("role"));
+        u.setRole(admin ? "admin" : "user");
+        u.setPerm(admin ? 0 : 1);
         u.setStatus("active");
         u.setCreatedAt(LocalDateTime.now());
         userService.save(u);
@@ -144,7 +147,10 @@ public class AdminController {
             u.setStatus("disabled".equals(body.get("status")) ? "disabled" : "active");
         }
         if (body.containsKey("role")) {
-            u.setRole("admin".equals(body.get("role")) ? "admin" : "user");
+            boolean admin = "admin".equals(body.get("role"));
+            // 角色与权限字段保持同步：admin ↔ perm=0
+            u.setRole(admin ? "admin" : "user");
+            u.setPerm(admin ? 0 : 1);
         }
         userService.updateById(u);
         return userMap(u);
@@ -527,6 +533,7 @@ public class AdminController {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("username", u.getUsername());
         m.put("role", u.getRole());
+        m.put("perm", u.getPerm());
         m.put("status", u.getStatus());
         m.put("createdAt", u.getCreatedAt());
         return m;

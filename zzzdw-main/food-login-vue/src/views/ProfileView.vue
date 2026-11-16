@@ -29,7 +29,11 @@ async function load() {
 }
 
 function openPost(id) { router.push(`/post/${id}`) }
-function goHome() { router.push('/') }
+function goHome() {
+  // 返回上一个页面；直接输入网址进来没有历史时才回首页
+  if (window.history.state && window.history.state.back != null) router.back()
+  else router.push('/')
+}
 
 onMounted(load)
 </script>
