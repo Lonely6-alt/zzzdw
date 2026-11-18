@@ -16,6 +16,7 @@ import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -60,6 +61,7 @@ public class ChatWsHandler extends TextWebSocketHandler {
         }
         session.getAttributes().put(ATTR_USER_ID, userId);
         online.computeIfAbsent(userId, k -> ConcurrentHashMap.newKeySet()).add(session);
+        broadcastPresence(userId, true);
     }
 
     @Override
@@ -79,6 +81,7 @@ public class ChatWsHandler extends TextWebSocketHandler {
                 set.remove(session);
                 if (set.isEmpty()) {
                     online.remove(userId);
+                    broadcastPresence(userId, false);
                 }
             }
         }
@@ -88,6 +91,20 @@ public class ChatWsHandler extends TextWebSocketHandler {
     public boolean isOnline(Long userId) {
         Set<WebSocketSession> set = userId == null ? null : online.get(userId);
         return set != null && !set.isEmpty();
+    }
+
+    /** 当前在线用户 ID 快照，供会话列表显示在线圆点 */
+    public Set<Long> onlineUserIds() {
+        return Set.copyOf(online.keySet());
+    }
+
+    /** 向所有在线连接广播某用户的上线/下线事件 */
+    private void broadcastPresence(Long userId, boolean isOnline) {
+        Map<String, Object> event = new HashMap<>();
+        event.put("type", "presence");
+        event.put("userId", userId);
+        event.put("online", isOnline);
+        push(online.keySet(), event);
     }
 
     /**

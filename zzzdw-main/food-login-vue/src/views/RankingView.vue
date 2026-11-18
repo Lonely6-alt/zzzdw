@@ -13,7 +13,7 @@ function goBack() {
   else router.push('/')
 }
 const { ids: favIds } = useFavorites()
-const { avgRating, count: reviewCount } = useReviews()
+const { displayRating, count: reviewCount } = useReviews()
 
 const posts = ref([])
 const tab = ref('hot') // hot | rating | news
@@ -38,11 +38,10 @@ const hotList = computed(() =>
   }).sort((a, b) => b.heat - a.heat).slice(0, 8)
 )
 
-// 好评榜：有评价且均分高
+// 好评榜：展示评分优先真实点评均分、无点评回退后端种子分，所有商品都上榜
 const ratingList = computed(() =>
   [...posts.value]
-    .map(p => ({ ...p, avg: avgRating(p.id), n: reviewCount(p.id) }))
-    .filter(p => p.n > 0)
+    .map(p => ({ ...p, avg: displayRating(p), n: p.reviewCount ?? reviewCount(p.id) }))
     .sort((a, b) => b.avg - a.avg || b.n - a.n)
     .slice(0, 8)
 )
@@ -137,7 +136,7 @@ onMounted(loadPosts)
           <span class="r-avg">{{ p.avg.toFixed(1) }}（{{ p.n }}）</span>
         </div>
       </li>
-      <li v-if="!ratingList.length" class="rempty">还没有评价，去帖子下抢沙发打个分吧～</li>
+      <li v-if="!ratingList.length" class="rempty">还没有美食数据～</li>
     </ul>
 
     <!-- 新店榜 -->
@@ -150,8 +149,8 @@ onMounted(loadPosts)
           <div class="r-sub">@{{ p.author }} · {{ p.category }}</div>
         </div>
         <div class="r-metric">
-          <span class="r-stars">{{ starStr(avgRating(p.id) || 0) }}</span>
-          <span class="r-avg">{{ avgRating(p.id) ? avgRating(p.id).toFixed(1) : '暂无' }}</span>
+          <span class="r-stars">{{ starStr(displayRating(p)) }}</span>
+          <span class="r-avg">{{ displayRating(p).toFixed(1) }}</span>
         </div>
       </li>
       <li v-if="!newList.length" class="rempty">还没有新店数据～</li>

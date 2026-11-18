@@ -56,4 +56,15 @@ public interface PostService extends IService<Post> {
      * 店铺名实时读自 shop 表，因此店家改名后菜品卡片会同步显示新名字。
      */
     void enrichPosts(List<Post> posts);
+
+    /**
+     * 批量回填互动状态：点赞数、我是否已点赞、我是否已收藏。
+     *
+     * @param posts  帖子列表
+     * @param userId 当前登录用户 ID；为 null 时只回填点赞数，liked / favorited 置 false
+     */
+    void markInteractions(List<Post> posts, Long userId);
+
+    /** 切换点赞状态，返回当前是否已点赞 */
+    boolean toggleLike(Long postId, Long userId);
 }

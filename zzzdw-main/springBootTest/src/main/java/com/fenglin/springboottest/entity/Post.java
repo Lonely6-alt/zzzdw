@@ -53,6 +53,9 @@ public class Post {
     /** 封面表情图标 */
     private String emoji;
 
+    /** 菜品图片地址；为空时前端回退 emoji 封面 */
+    private String imageUrl;
+
     /** 内容 */
     private String content;
 
@@ -79,6 +82,17 @@ public class Post {
 
     /** 所在商圈（如：三里屯、五道口）；用于前台「商圈」筛选与卡片展示 */
     private String district;
+
+    /** 点赞数（数据库列 like_count；取消点赞时递减，post_like 表只记录谁赞过） */
+    private Integer likeCount;
+
+    /** 当前登录用户是否已点赞（非数据库字段，未登录时为 false） */
+    @TableField(exist = false)
+    private Boolean liked;
+
+    /** 当前登录用户是否已收藏（非数据库字段，未登录时为 false） */
+    @TableField(exist = false)
+    private Boolean favorited;
 
     /** 发布时间；序列化为 ISO 格式字符串，前端 new Date() 可直接解析 */
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")

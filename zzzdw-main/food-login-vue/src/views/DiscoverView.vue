@@ -16,7 +16,7 @@ function goBack() {
   if (window.history.state && window.history.state.back != null) router.back()
   else router.push('/')
 }
-const { avgRating, count: reviewCount } = useReviews()
+const { displayRating, count: reviewCount } = useReviews()
 const { isFav, toggle } = useFavorites()
 const { openOrder } = useOrder()
 
@@ -148,7 +148,7 @@ const authors = computed(() => {
     const name = p.author || '匿名'
     if (!map[name]) map[name] = { name, posts: 0, sum: 0, cnt: 0 }
     map[name].posts++
-    const av = avgRating(p.id)
+    const av = displayRating(p)
     if (av) { map[name].sum += av; map[name].cnt++ }
   }
   return Object.values(map)
@@ -299,7 +299,7 @@ onUnmounted(() => clearTimeout(rollTimer))
                   <h4>{{ p.title }}</h4>
                   <p>@{{ p.author }}</p>
                 </div>
-                <span class="cl-star">{{ avgRating(p.id) ? avgRating(p.id).toFixed(1) : '—' }}</span>
+                <span class="cl-star">{{ displayRating(p).toFixed(1) }}</span>
                 <button class="cl-order" type="button" @click.stop="onOrder(p)">点单</button>
               </article>
             </div>
@@ -372,7 +372,7 @@ onUnmounted(() => clearTimeout(rollTimer))
               <div class="tl-foot">
                 <span class="tl-cat">{{ sceneOf(p) || p.category }}</span>
                 <span>💬 {{ reviewCount(p.id) }}</span>
-                <span>★ {{ avgRating(p.id) ? avgRating(p.id).toFixed(1) : '暂无' }}</span>
+                <span>★ {{ displayRating(p).toFixed(1) }}</span>
               </div>
             </div>
           </li>

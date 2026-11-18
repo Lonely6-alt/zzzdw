@@ -29,11 +29,18 @@ export function useReviews() {
     ensureLoaded()
     return comments.value.filter(c => c.postId === Number(postId))
   }
-  // 某帖子平均评分（0 表示暂无评价）
-  function avgRating(postId) {
+  // 某帖子平均评分（基于真实点评；无点评时返回 fallback，通常是后端 post.rating）
+  function avgRating(postId, fallback = 0) {
     const list = getReviews(postId)
-    if (!list.length) return 0
-    return list.reduce((s, r) => s + r.rating, 0) / list.length
+    if (!list.length) return Number(fallback) || 0
+    return list.reduce((s, r) => s + (Number(r.rating) || 0), 0) / list.length
+  }
+  // 展示用评分：真实点评均分优先，无点评回退后端种子评分，保证每个商品都有分数
+  // 点评是响应式的，评论拉取完成后 computed 会自动重算，无需手动刷新
+  function displayRating(post) {
+    if (!post) return 0
+    const v = avgRating(post.id, post.rating)
+    return Math.min(5, Math.max(0, Math.round(v * 10) / 10))
   }
   function count(postId) {
     return getReviews(postId).length
@@ -56,5 +63,5 @@ export function useReviews() {
     ensureLoaded()
     return [...comments.value].sort((a, b) => b.id - a.id)
   }
-  return { comments, getReviews, avgRating, count, add, allReviews, ensureLoaded }
+  return { comments, getReviews, avgRating, displayRating, count, add, allReviews, ensureLoaded }
 }

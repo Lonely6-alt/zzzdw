@@ -9,6 +9,7 @@ import com.fenglin.springboottest.dto.ReviewRequest;
 import com.fenglin.springboottest.entity.Category;
 import com.fenglin.springboottest.entity.Favorite;
 import com.fenglin.springboottest.entity.Post;
+import com.fenglin.springboottest.entity.PostLike;
 import com.fenglin.springboottest.entity.Review;
 import com.fenglin.springboottest.entity.Shop;
 import com.fenglin.springboottest.entity.User;
@@ -16,6 +17,7 @@ import com.fenglin.springboottest.mapper.PostMapper;
 import com.fenglin.springboottest.mapper.ShopMapper;
 import com.fenglin.springboottest.service.CategoryService;
 import com.fenglin.springboottest.service.FavoriteService;
+import com.fenglin.springboottest.service.PostLikeService;
 import com.fenglin.springboottest.service.PostService;
 import com.fenglin.springboottest.service.ReviewService;
 import com.fenglin.springboottest.service.UserService;
@@ -26,32 +28,40 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 美食帖子 Service 实现：搜索 / 首页聚合 / 发布 / 点评 / 收藏。
+ * 美食帖子 Service 实现：搜索 / 首页聚合 / 发布 / 点评 / 收藏 / 点赞。
  */
 @Service
 public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements PostService {
 
+    /** 新发布菜品的初始口碑分；产生点评后由 recompute 按真实点评重算，保证每道菜都有评分 */
+    private static final BigDecimal DEFAULT_RATING = new BigDecimal("4.5");
+
     private final CategoryService categoryService;
     private final ReviewService reviewService;
     private final FavoriteService favoriteService;
+    private final PostLikeService postLikeService;
     private final ShopMapper shopMapper;
     private final UserService userService;
 
     public PostServiceImpl(CategoryService categoryService,
                            ReviewService reviewService,
                            FavoriteService favoriteService,
+                           PostLikeService postLikeService,
                            ShopMapper shopMapper,
                            UserService userService) {
         this.categoryService = categoryService;
         this.reviewService = reviewService;
         this.favoriteService = favoriteService;
+        this.postLikeService = postLikeService;
         this.shopMapper = shopMapper;
         this.userService = userService;
     }
@@ -82,6 +92,78 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
                 p.setShopOwner(ownerNames.get(s.getOwnerId()));
             }
         }
+    }
+
+    @Override
+    public void markInteractions(List<Post> posts, Long userId) {
+        if (posts == null || posts.isEmpty()) {
+            return;
+        }
+        List<Long> ids = posts.stream().map(Post::getId)
+                .filter(Objects::nonNull).collect(Collectors.toList());
+        if (ids.isEmpty()) {
+            return;
+        }
+
+        // 点赞数直接读 post.like_count（真实列），这里只判断「我有没有赞过」
+        Set<Long> likedIds = new HashSet<>();
+        List<PostLike> likes = postLikeService.list(
+                new LambdaQueryWrapper<PostLike>().in(PostLike::getPostId, ids));
+        for (PostLike l : likes) {
+            if (userId != null && userId.equals(l.getUserId())) {
+                likedIds.add(l.getPostId());
+            }
+        }
+
+        // 我是否收藏：只在登录时查
+        Set<Long> favIds = new HashSet<>();
+        if (userId != null) {
+            List<Favorite> favs = favoriteService.list(new LambdaQueryWrapper<Favorite>()
+                    .eq(Favorite::getUserId, userId)
+                    .in(Favorite::getPostId, ids));
+            for (Favorite f : favs) {
+                favIds.add(f.getPostId());
+            }
+        }
+
+        for (Post p : posts) {
+            if (p.getLikeCount() == null) {
+                p.setLikeCount(0);
+            }
+            p.setLiked(likedIds.contains(p.getId()));
+            p.setFavorited(favIds.contains(p.getId()));
+        }
+    }
+
+    @Override
+    public boolean toggleLike(Long postId, Long userId) {
+        Post post = getById(postId);
+        if (post == null) {
+            throw new BizException(404, "帖子不存在");
+        }
+        LambdaQueryWrapper<PostLike> q = new LambdaQueryWrapper<PostLike>()
+                .eq(PostLike::getUserId, userId)
+                .eq(PostLike::getPostId, postId);
+        PostLike exist = postLikeService.getOne(q, false);
+
+        int current = post.getLikeCount() == null ? 0 : post.getLikeCount();
+        boolean liked;
+        if (exist == null) {
+            PostLike like = new PostLike();
+            like.setUserId(userId);
+            like.setPostId(postId);
+            like.setCreatedAt(LocalDateTime.now());
+            postLikeService.save(like);
+            current = current + 1;
+            liked = true;
+        } else {
+            postLikeService.removeById(exist.getId());
+            current = Math.max(0, current - 1);
+            liked = false;
+        }
+        post.setLikeCount(current);
+        updateById(post);
+        return liked;
     }
 
     @Override
@@ -205,9 +287,10 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         }
         post.setEmoji(emoji);
         post.setContent(content);
-        post.setRating(BigDecimal.ZERO);
+        post.setRating(DEFAULT_RATING);
         post.setReviewCount(0);
         post.setFavoriteCount(0);
+        post.setLikeCount(0);
         post.setOrderCount(0);
         post.setStatus("pending"); // 新帖需后台审核通过后展示
         post.setCreatedAt(LocalDateTime.now());
@@ -308,7 +391,8 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         }
         List<Review> rs = reviewService.list(new LambdaQueryWrapper<Review>().eq(Review::getPostId, postId));
         int n = rs.size();
-        double avg = rs.stream().mapToInt(Review::getRating).average().orElse(0.0);
+        // 没有点评时保留初始口碑分，避免评分归零导致前端显示空星
+        double avg = rs.stream().mapToInt(Review::getRating).average().orElse(DEFAULT_RATING.doubleValue());
         p.setReviewCount(n);
         p.setRating(BigDecimal.valueOf(Math.round(avg * 10.0) / 10.0));
         updateById(p);

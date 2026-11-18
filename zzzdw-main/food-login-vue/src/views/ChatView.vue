@@ -22,6 +22,17 @@ const bubbleBox = ref(null)
 const myId = ref(null)
 const wsStatus = ref('offline') // connecting | online | offline
 
+// 输入增强：表情 / 图片 / 字数
+const MAX_LEN = 1000
+const showEmoji = ref(false)
+const uploading = ref(false)
+const imageInput = ref(null)
+const inputEl = ref(null)
+const CHAT_EMOJIS = ['🍜', '🍣', '🍔', '🍰', '☕', '🍢', '🍲', '🥗', '🍗', '🍕', '🍦', '🧋', '😋', '👍', '🎉', '❤️', '😂', '🙏', '🥢', '🍻']
+
+// 会话列表在线状态（WebSocket 上线/下线事件 + 首屏拉取）
+const onlineIds = ref(new Set())
+
 // 新建群聊弹窗
 const showGroupModal = ref(false)
 const contacts = ref([])        // 可邀请的好友（建群选人用）
@@ -231,12 +242,12 @@ async function openByPeerName(name) {
 }
 
 /* ---------------- 发送 ---------------- */
-async function send() {
-  const content = draft.value.trim()
+// 文本与图片共用发送逻辑；图片内容形如 [IMG]/api/chat/images/xxx.jpg[/IMG]
+async function sendContent(content, fromDraft = false) {
   if (!content || !activeId.value) return
   const type = activeType.value
   const id = activeId.value
-  draft.value = ''
+  if (fromDraft) draft.value = ''
   try {
     const url = type === 'private'
       ? `${API}/sessions/${id}/messages`
@@ -244,19 +255,54 @@ async function send() {
     const r = await fetch(url, { method: 'POST', headers: h(), body: JSON.stringify({ content }) })
     const d = await r.json().catch(() => ({}))
     if (!r.ok) throw new Error(d.message || '发送失败')
-    // WebSocket 会把消息推回来（已去重），这里兜底立即刷新
-    if (type === 'private') {
-      const msg = { ...d }
-      mergeMessage(msg)
-    } else {
-      mergeMessage(d)
-    }
+    mergeMessage({ ...d })
     loadMessages(true)
   } catch (e) {
-    draft.value = content
+    if (fromDraft) draft.value = content
     toast(e.message, 'error')
   }
 }
+
+async function send() {
+  const content = draft.value.trim()
+  if (!content || uploading.value) return
+  if (content.length > MAX_LEN) { toast(`消息最多 ${MAX_LEN} 字`, 'error'); return }
+  await sendContent(content, true)
+}
+
+function insertEmoji(e) {
+  const next = draft.value + e
+  if (next.length > MAX_LEN) { toast(`消息最多 ${MAX_LEN} 字`, 'error'); return }
+  draft.value = next
+  nextTick(() => inputEl.value?.focus())
+}
+function pickImage() { imageInput.value?.click() }
+async function onImagePicked(e) {
+  const file = e.target?.files?.[0]
+  if (e.target) e.target.value = ''
+  if (!file) return
+  if (!file.type.startsWith('image/')) { toast('请选择图片文件', 'error'); return }
+  if (file.size > 5 * 1024 * 1024) { toast('图片不能超过 5MB', 'error'); return }
+  uploading.value = true
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+    const r = await fetch(`${API}/upload-image`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: fd
+    })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok) throw new Error(d.message || '图片上传失败')
+    await sendContent(`[IMG]${d.url}[/IMG]`)
+    toast('菜品图片已发送 🍜', 'success')
+  } catch (err) {
+    toast(err.message, 'error')
+  } finally {
+    uploading.value = false
+  }
+}
+function previewImage(url) { if (url) window.open(url, '_blank') }
 
 function mergeMessage(m) {
   if (!m || m.msgId == null) return
@@ -329,6 +375,7 @@ function connectWs() {
   }
   ws.onopen = () => {
     wsStatus.value = 'online'
+    loadOnline()
     clearInterval(pingTimer)
     pingTimer = setInterval(() => {
       if (ws && ws.readyState === 1) ws.send('ping')
@@ -353,6 +400,15 @@ function connectWs() {
 let readTimer = null
 function handleWsEvent(d) {
   if (!d || d.type === 'pong') return
+
+  // 上线/下线广播：动态刷新会话列表圆点
+  if (d.type === 'presence' && d.userId != null) {
+    const set = new Set(onlineIds.value)
+    if (d.online) set.add(Number(d.userId))
+    else set.delete(Number(d.userId))
+    onlineIds.value = set
+    return
+  }
 
   if (d.type === 'private' && d.msg) {
     const m = d.msg
@@ -430,6 +486,34 @@ function fmtTime(t) {
 function shortTime(t) {
   return t ? String(t).replace('T', ' ').slice(11, 16) : ''
 }
+// 会话预览：图片消息显示为「[图片]」，避免露出链接或 base64
+function msgPreview(text) {
+  if (!text) return ''
+  return /^\[IMG\][\s\S]+\[\/IMG\]$/.test(String(text)) ? '[图片]' : String(text)
+}
+// 气泡内容解析：图片消息渲染缩略图，其余按文本展示
+function msgOf(m) {
+  const c = String(m?.content || '')
+  const match = c.match(/^\[IMG\]([\s\S]+)\[\/IMG\]$/)
+  return match ? { image: true, url: match[1] } : { image: false, text: c }
+}
+// 在线状态：绿色圆点 = 对方 WebSocket 在线，灰色 = 离线
+function isOnline(id) { return id != null && onlineIds.value.has(Number(id)) }
+async function loadOnline() {
+  try {
+    const r = await fetch(`${API}/online`, { headers: h() })
+    if (!r.ok) return
+    const d = await r.json()
+    const set = new Set((d.online || []).map(Number))
+    if (myId.value != null) set.add(Number(myId.value))
+    onlineIds.value = set
+  } catch { /* 静默，圆点保持上次状态 */ }
+}
+// 好友列表未读数：与已有私聊会话关联，未建会话则为 0
+function friendUnread(username) {
+  const s = sessions.value.find(x => x.peerName === username)
+  return s ? Number(s.unread || 0) : 0
+}
 function isMine(m) {
   if (activeType.value === 'group') {
     return Number(m.senderId) === Number(myId.value)
@@ -449,6 +533,7 @@ onMounted(async () => {
   await loadMe()
   await loadSessions()
   await loadGroups()
+  loadOnline()
   loadFriends()
   loadPending()
   connectWs()
@@ -463,7 +548,7 @@ onMounted(async () => {
   }
 
   // 轮询作为兜底（WebSocket 断开时仍能收到消息）
-  listTimer = setInterval(() => { loadSessions(); loadGroups(); loadPending() }, 12000)
+  listTimer = setInterval(() => { loadSessions(); loadGroups(); loadOnline(); loadPending() }, 12000)
   msgTimer = setInterval(() => loadMessages(true), 8000)
 })
 
@@ -499,13 +584,14 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
           <div class="side-cat">好友<span class="cat-count">{{ friends.length }}</span><span v-if="pendingCount" class="cat-badge">{{ pendingCount }} 个申请</span></div>
           <ul class="s-list">
             <li v-for="f in friends" :key="'f' + f.id" @click="openByPeerName(f.username)">
-              <span class="s-avatar">{{ (f.username || '?')[0] }}</span>
+              <span class="s-avatar">{{ (f.username || '?')[0] }}<i class="p-dot" :class="{ on: isOnline(f.id) }"></i></span>
               <div class="s-main">
                 <div class="s-top">
                   <span class="s-name">@{{ f.username }}</span>
                 </div>
                 <div class="s-msg">点这里开始聊天</div>
               </div>
+              <span v-if="friendUnread(f.username)" class="s-dot sm">{{ friendUnread(f.username) > 99 ? '99+' : friendUnread(f.username) }}</span>
               <button class="f-del" type="button" title="删除好友" @click.stop="removeFriendShip(f)">✕</button>
             </li>
             <li v-if="!friends.length" class="s-empty">
@@ -521,13 +607,13 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
               :class="{ on: activeType === 'private' && Number(s.sessionId) === Number(activeId) }"
               @click="openSession(s.sessionId, s.peerId, s.peerName)"
             >
-              <span class="s-avatar">{{ (s.peerName || '?')[0] }}</span>
+              <span class="s-avatar">{{ (s.peerName || '?')[0] }}<i class="p-dot" :class="{ on: isOnline(s.peerId) }"></i></span>
               <div class="s-main">
                 <div class="s-top">
                   <span class="s-name">@{{ s.peerName }}</span>
                   <span class="s-time">{{ shortTime(s.lastTime) }}</span>
                 </div>
-                <div class="s-msg">{{ s.lastMsg || '开始聊天吧～' }}</div>
+                <div class="s-msg">{{ msgPreview(s.lastMsg) || '开始聊天吧～' }}</div>
               </div>
               <span v-if="s.unread > 0" class="s-dot">{{ s.unread > 99 ? '99+' : s.unread }}</span>
             </li>
@@ -550,7 +636,7 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
                   <span class="s-name">{{ g.groupName }}</span>
                   <span class="s-time">{{ shortTime(g.lastTime) }}</span>
                 </div>
-                <div class="s-msg">{{ g.lastMsg || `${g.memberCount} 位成员` }}</div>
+                <div class="s-msg">{{ msgPreview(g.lastMsg) || `${g.memberCount} 位成员` }}</div>
               </div>
               <span v-if="g.unread > 0" class="s-dot">{{ g.unread > 99 ? '99+' : g.unread }}</span>
             </li>
@@ -587,7 +673,14 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
             >
               <div class="bubble" :class="{ mine: isMine(m) }">
                 <span v-if="activeType === 'group' && !isMine(m)" class="b-name">{{ m.senderName }}</span>
-                <p class="b-text">{{ m.content }}</p>
+                <img
+                  v-if="msgOf(m).image"
+                  class="b-img"
+                  :src="msgOf(m).url"
+                  alt="菜品图片"
+                  @click="previewImage(msgOf(m).url)"
+                />
+                <p v-else class="b-text">{{ msgOf(m).text }}</p>
                 <span class="b-time">{{ fmtTime(m.sendTime) }}</span>
               </div>
             </div>
@@ -596,14 +689,24 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
             </div>
           </div>
           <div class="c-input">
+            <div class="c-tools">
+              <button class="t-btn" type="button" title="表情" @click="showEmoji = !showEmoji">😊</button>
+              <button class="t-btn" type="button" title="发送菜品图片" :disabled="uploading" @click="pickImage">🖼️</button>
+              <input ref="imageInput" class="hidden-file" type="file" accept="image/*" @change="onImagePicked" />
+              <div v-if="showEmoji" class="emoji-pop">
+                <button v-for="e in CHAT_EMOJIS" :key="e" type="button" @click="insertEmoji(e)">{{ e }}</button>
+              </div>
+            </div>
             <input
+              ref="inputEl"
               v-model="draft"
               type="text"
               :placeholder="activeType === 'group' ? `发消息到「${activeGroup?.groupName || ''}」…` : '输入消息，回车发送…'"
-              maxlength="1000"
-              @keydown.enter="send"
+              :maxlength="MAX_LEN"
+              @keydown.enter.exact.prevent="send"
             />
-            <button :disabled="!draft.trim()" @click="send">发送</button>
+            <span class="c-count">{{ draft.length }}/{{ MAX_LEN }}</span>
+            <button :disabled="!draft.trim() || uploading" @click="send">{{ uploading ? '上传中' : '发送' }}</button>
           </div>
         </template>
         <div v-else class="c-placeholder">
@@ -726,17 +829,21 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
 .s-list{ list-style:none; margin:0; padding:4px 8px 8px; }
 .s-list li{ display:flex; align-items:center; gap:10px; padding:10px; border-radius:12px; cursor:pointer; transition:.2s; position:relative; }
 .s-list li:hover{ background:#fff0e4; }
-.s-list li.on{ background:#ffe9d8; }
+.s-list li.on{ background:#ffdfc4; box-shadow:inset 4px 0 0 #ff6b3d; }
+.s-list li.on .s-name{ color:#c2410c; font-weight:800; }
+.s-list li.on .s-msg{ color:#8a5a3b; }
 .s-avatar{ width:38px; height:38px; flex-shrink:0; border-radius:50%; display:flex; align-items:center; justify-content:center;
-  background:linear-gradient(135deg,#ffb26b,#ff5f3d); color:#fff; font-weight:800; font-size:16px; }
+  background:linear-gradient(135deg,#ffb26b,#ff5f3d); color:#fff; font-weight:800; font-size:16px; position:relative; }
 .s-avatar.group{ background:linear-gradient(135deg,#8ec5ff,#5c8df6); font-size:19px; }
 .s-main{ flex:1; min-width:0; }
 .s-top{ display:flex; justify-content:space-between; align-items:baseline; gap:6px; }
 .s-name{ font-size:13.5px; font-weight:700; color:#4a3526; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.s-time{ font-size:11px; color:#b99b82; flex-shrink:0; }
-.s-msg{ font-size:12px; color:#9a8270; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
-.s-dot{ position:absolute; right:10px; top:8px; min-width:18px; height:18px; padding:0 5px; border-radius:9px;
-  background:#ff3b30; color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+.s-time{ font-size:11px; color:#b99b82; flex-shrink:0; font-variant-numeric:tabular-nums; }
+.s-msg{ font-size:12px; color:#9a8270; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:3px; }
+.s-dot{ position:absolute; right:9px; top:8px; min-width:19px; height:19px; padding:0 5px; border-radius:10px;
+  background:#ff3b30; color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 0 2px #fffaf4; }
+.s-dot.sm{ min-width:16px; height:16px; font-size:10px; top:10px; right:28px; }
 .s-empty{ text-align:center; color:#b99b82; font-size:12px; padding:16px 16px 20px; line-height:1.9; cursor:default; }
 
 /* 好友 */
@@ -779,25 +886,51 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
 .c-live.off i{ background:#d9c7b4; }
 @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
 
-.c-box{ flex:1; overflow-y:auto; padding:18px 20px; background:#fffaf4; }
-.row{ display:flex; margin-bottom:14px; }
+.c-box{ flex:1; overflow-y:auto; padding:18px 20px; background:#fffaf4; position:relative; }
+/* 低透明度美食暗纹：只做氛围，不干扰消息阅读 */
+.c-box::before{ content:'🍜  🍣  🍔  🍰  ☕  🍢  🍲  🥟  🍡  🍟  🧋  🍱  🍜  🍣  🍔  🍰';
+  position:absolute; inset:-16px; font-size:30px; line-height:2.4; word-spacing:24px; opacity:.045;
+  transform:rotate(-8deg); pointer-events:none; user-select:none; z-index:0; }
+.row{ display:flex; margin-bottom:14px; position:relative; z-index:1; }
 .row.mine{ justify-content:flex-end; }
-.bubble{ max-width:72%; background:#fff; border:1.5px solid #f0e6db; border-radius:14px 14px 14px 4px; padding:9px 13px; }
+.bubble{ max-width:72%; background:#fffdf9; border:1.5px solid #f3e2d0; border-radius:15px 15px 15px 5px;
+  padding:10px 14px; box-shadow:0 2px 7px rgba(126,90,62,.06); }
 .row .bubble{ margin-right:auto; }
-.bubble.mine{ background:linear-gradient(130deg,#ff9a52,#ff5f3d); color:#fff; border:none; border-radius:14px 14px 4px 14px; margin-left:auto; }
-.b-name{ display:block; font-size:11.5px; font-weight:800; color:#b4652f; margin-bottom:3px; }
+.bubble.mine{ background:linear-gradient(130deg,#ff9a52,#ff5f3d); color:#fff; border:none; border-radius:15px 15px 5px 15px;
+  margin-left:auto; box-shadow:0 4px 12px rgba(255,95,61,.22); }
+.b-name{ display:inline-block; font-size:11px; font-weight:800; color:#b4652f; background:#fff1e2;
+  border-radius:6px; padding:1px 7px; margin-bottom:5px; }
 .b-text{ margin:0; font-size:14px; line-height:1.6; word-break:break-word; white-space:pre-wrap; }
+.b-img{ display:block; max-width:100%; max-height:220px; border-radius:10px; cursor:zoom-in; object-fit:cover; background:#fff3e6; }
 .b-time{ display:block; font-size:10.5px; opacity:.6; margin-top:4px; }
-.c-empty{ text-align:center; color:#c4ab94; font-size:13px; padding-top:60px; }
+.c-empty{ text-align:center; color:#c4ab94; font-size:13px; padding-top:60px; position:relative; z-index:1; }
 
-.c-input{ display:flex; gap:10px; padding:12px 16px; border-top:1.5px solid #f0e6db; background:#fff; }
-.c-input input{ flex:1; border:1.5px solid #ecdfd2; border-radius:999px; padding:10px 16px; font-size:14px; outline:none;
+/* 在线圆点：绿色在线 / 灰色离线，带轻微呼吸动画 */
+.p-dot{ position:absolute; right:-2px; bottom:-2px; width:11px; height:11px; border-radius:50%;
+  background:#c9c2ba; border:2px solid #fffaf4; transition:background .25s, box-shadow .25s; }
+.p-dot.on{ background:#2fbf68; box-shadow:0 0 0 3px rgba(47,191,104,.16); animation:dotPulse 2.2s ease-in-out infinite; }
+@keyframes dotPulse{ 0%,100%{ box-shadow:0 0 0 3px rgba(47,191,104,.16); } 50%{ box-shadow:0 0 0 5px rgba(47,191,104,.06); } }
+
+.c-input{ display:flex; align-items:center; gap:9px; padding:12px 16px; border-top:1.5px solid #f0e6db; background:#fff; position:relative; }
+.c-tools{ position:relative; display:flex; gap:6px; flex-shrink:0; }
+.t-btn{ width:36px; height:36px; border-radius:50%; border:1.5px solid #ecdfd2; background:#fffaf4; font-size:17px;
+  cursor:pointer; transition:.2s; padding:0; line-height:1; }
+.t-btn:hover{ border-color:var(--orange,#ff9a52); background:#fff1e2; transform:translateY(-1px); }
+.t-btn:disabled{ opacity:.5; cursor:not-allowed; }
+.hidden-file{ display:none; }
+.emoji-pop{ position:absolute; bottom:46px; left:0; z-index:30; width:240px; display:grid;
+  grid-template-columns:repeat(6,1fr); gap:3px; padding:9px; background:#fff; border:1.5px solid #f0e6db;
+  border-radius:14px; box-shadow:0 12px 28px rgba(126,90,62,.18); }
+.emoji-pop button{ border:none; background:transparent; font-size:19px; padding:5px 0; border-radius:8px; cursor:pointer; }
+.emoji-pop button:hover{ background:#fff1e2; }
+.c-count{ font-size:11px; color:#b99b82; flex-shrink:0; font-variant-numeric:tabular-nums; }
+.c-input input{ flex:1; min-width:0; border:1.5px solid #ecdfd2; border-radius:999px; padding:10px 16px; font-size:14px; outline:none;
   transition:border-color .2s; font-family:inherit; }
 .c-input input:focus{ border-color:var(--orange,#ff9a52); }
-.c-input button{ border:none; border-radius:999px; padding:10px 22px; font-size:14px; font-weight:800; color:#fff; cursor:pointer;
-  background:linear-gradient(120deg,#ff9a52,#ff5f3d); transition:.2s; font-family:inherit; }
-.c-input button:disabled{ opacity:.45; cursor:not-allowed; }
-.c-input button:not(:disabled):hover{ transform:translateY(-1px); box-shadow:0 6px 14px rgba(255,90,60,.3); }
+.c-input > button{ border:none; border-radius:999px; padding:10px 22px; font-size:14px; font-weight:800; color:#fff; cursor:pointer;
+  background:linear-gradient(120deg,#ff9a52,#ff5f3d); transition:.2s; font-family:inherit; flex-shrink:0; }
+.c-input > button:disabled{ opacity:.45; cursor:not-allowed; }
+.c-input > button:not(:disabled):hover{ transform:translateY(-1px); box-shadow:0 6px 14px rgba(255,90,60,.3); }
 
 .c-placeholder{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#c4ab94; gap:10px; }
 .p-emoji{ font-size:52px; }

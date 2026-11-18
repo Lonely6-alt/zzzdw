@@ -2,11 +2,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFavorites } from '../composables/useFavorites.js'
+import { useLikes } from '../composables/useLikes.js'
 import { useReviews } from '../composables/useReviews.js'
-import { authUser } from '../composables/useAuth.js'
+import { useToast } from '../composables/useToast.js'
+import { authUser, getToken } from '../composables/useAuth.js'
 
 const route = useRoute()
 const router = useRouter()
+const { toast } = useToast()
 
 // 返回上一个页面；直接打开详情链接没有历史时才回首页
 function goBack() {
@@ -18,21 +21,30 @@ const notFound = ref(false)
 const loading = ref(false)
 
 const { isFav, toggle } = useFavorites()
-const { getReviews, avgRating, add } = useReviews()
+const { isLiked, countOf, seed: seedLikes, toggle: toggleLike } = useLikes()
+const { getReviews, displayRating, add } = useReviews()
 
 const myRating = ref(5)
 const myComment = ref('')
 const reviewMsg = ref('')
+const preview = ref(false)
+const brokenImg = ref(false)
+const submitting = ref(false)
 
 const reviewsList = computed(() => (post.value ? getReviews(post.value.id) : []))
-const avg = computed(() => (post.value ? avgRating(post.value.id) : 0))
+const avg = computed(() => (post.value ? displayRating(post.value) : 0))
+const likeCount = computed(() => (post.value ? countOf(post.value.id, post.value.likeCount || 0) : 0))
+const coverImg = computed(() => (post.value && post.value.imageUrl && !brokenImg.value ? post.value.imageUrl : ''))
 
 onMounted(async () => {
   loading.value = true
   try {
-    const r = await fetch(`/api/posts/${route.params.id}`)
+    // 带 token 请求：后端才会返回 liked / favorited，点赞按钮状态才准
+    const t = getToken()
+    const r = await fetch(`/api/posts/${route.params.id}`, t ? { headers: { Authorization: `Bearer ${t}` } } : undefined)
     if (r.status === 404) { notFound.value = true; return }
     post.value = await r.json()
+    seedLikes([post.value])
   } catch {
     notFound.value = true
   } finally {
@@ -41,16 +53,41 @@ onMounted(async () => {
 })
 
 function onFav() { if (post.value) toggle(post.value.id) }
+async function onLike() { if (post.value) await toggleLike(post.value.id, post.value.likeCount || 0) }
 function goProfile() { router.push('/profile') }
 function goMap() { router.push('/map') }
 function goRanking() { router.push('/ranking') }
-function submitReview() {
+
+/** 私信商家：优先店主账号，没有则找作者；复用时直接进已有会话 */
+function chatMerchant() {
+  if (!post.value) return
+  const peer = post.value.shopOwner || post.value.author
+  if (!peer) { toast('这家店还没开通私信', 'info'); return }
+  if (peer === authUser.value) { toast('这是你自己发布的笔记哦', 'info'); return }
+  router.push(`/chat?peer=${encodeURIComponent(peer)}`)
+}
+
+async function submitReview() {
   if (!post.value) return
   if (!myComment.value.trim()) { reviewMsg.value = '写点感受再发布吧～'; return }
-  add(post.value.id, { author: authUser.value || '匿名', rating: myRating.value, comment: myComment.value.trim() })
-  myComment.value = ''
-  myRating.value = 5
-  reviewMsg.value = ''
+  if (submitting.value) return
+  submitting.value = true
+  try {
+    await add(post.value.id, {
+      author: authUser.value || '匿名',
+      rating: myRating.value,
+      comment: myComment.value.trim()
+    })
+    post.value.reviewCount = (post.value.reviewCount || 0) + 1
+    myComment.value = ''
+    myRating.value = 5
+    reviewMsg.value = ''
+    toast('评价已发布 🎉', 'success')
+  } catch (e) {
+    reviewMsg.value = e.message || '发布失败，请稍后再试'
+  } finally {
+    submitting.value = false
+  }
 }
 function starStr(n) {
   const f = Math.round(n)
@@ -80,12 +117,21 @@ function starStr(n) {
     <p v-else-if="notFound" class="hint">帖子不存在或已被删除 🥲</p>
 
     <article v-else-if="post" class="post">
-      <div class="cover">
-        <div class="emoji">{{ post.emoji }}</div>
+      <div class="cover" :class="{ 'has-img': !!coverImg }">
+        <img v-if="coverImg" class="cover-img" :src="coverImg" :alt="post.title" @error="brokenImg = true" @click="preview = true" />
+        <div v-else class="cover-emoji" @click="preview = true">{{ post.emoji }}</div>
         <span class="tag">{{ post.category }}</span>
+        <button class="zoom" type="button" @click="preview = true">🔍 看大图</button>
+      </div>
+
+      <div class="acts">
+        <button class="fav" :class="{ on: isLiked(post.id) }" @click="onLike">
+          {{ isLiked(post.id) ? '❤️' : '🤍' }} {{ likeCount }}
+        </button>
         <button class="fav" :class="{ on: isFav(post.id) }" @click="onFav">
           {{ isFav(post.id) ? '★ 已收藏' : '☆ 收藏' }}
         </button>
+        <span class="acts-hint">💬 {{ post.reviewCount || 0 }} 条评价</span>
       </div>
 
       <h1>{{ post.title }}</h1>
@@ -93,13 +139,14 @@ function starStr(n) {
         <span v-if="post.shopName" class="shop-chip">🏠 {{ post.shopName }}</span>
         <span class="author" @click="goProfile">@{{ post.author }}</span>
         · {{ new Date(post.createdAt).toLocaleDateString() }}
+        <button class="dm-btn" type="button" @click="chatMerchant">💬 私信商家</button>
       </div>
       <p class="content">{{ post.content }}</p>
 
       <section class="reviews">
         <div class="rev-head">
           <h2>食客评价</h2>
-          <span class="rev-avg">★ {{ avg.toFixed(1) }}<small>（{{ reviewsList.length }} 条）</small></span>
+          <span class="rev-avg">★ {{ avg.toFixed(1) }}<small>（{{ reviewsList.length || post.reviewCount || 0 }} 条）</small></span>
         </div>
 
         <div class="rev-form" v-if="authUser">
@@ -109,7 +156,9 @@ function starStr(n) {
           </div>
           <textarea v-model="myComment" rows="2" placeholder="分享你的真实体验，帮大家避坑或种草～"></textarea>
           <div class="rev-msg">{{ reviewMsg }}</div>
-          <button class="rev-btn" type="button" @click="submitReview">发布评价</button>
+          <button class="rev-btn" type="button" :disabled="submitting" @click="submitReview">
+            {{ submitting ? '发布中…' : '发布评价' }}
+          </button>
         </div>
         <p v-else class="rev-login">登录后即可发表评价</p>
 
@@ -123,9 +172,19 @@ function starStr(n) {
             <p class="rev-text">{{ r.comment }}</p>
           </li>
         </ul>
-        <p v-if="!reviewsList.length" class="rev-empty">还没有评价，快来抢沙发～</p>
+        <p v-if="!reviewsList.length" class="rev-empty">还没有文字评价，快来抢沙发～</p>
       </section>
     </article>
+
+    <!-- 图片放大预览：teleport 到 body，避免被页面容器的 z-index 困住而盖不住顶部导航 -->
+    <Teleport to="body">
+      <div v-if="preview" class="lightbox" @click="preview = false">
+        <img v-if="coverImg" :src="coverImg" :alt="post && post.title" />
+        <div v-else class="lb-emoji">{{ post && post.emoji }}</div>
+        <span class="lb-close">✕</span>
+        <span class="lb-tip">点击任意处关闭</span>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -186,14 +245,37 @@ function starStr(n) {
   box-shadow:0 18px 44px rgba(255,90,60,.12); animation:cardIn .45s backwards; }
 @keyframes cardIn{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:translateY(0); } }
 
-.cover{ display:flex; align-items:center; gap:14px; margin-bottom:18px; }
-.cover .emoji{ font-size:54px; line-height:1; }
-.cover .tag{ display:inline-block; font-size:12px; color:var(--tomato); background:#fff0ea;
-  padding:4px 12px; border-radius:11px; font-weight:600; }
-.fav{ margin-left:auto; border:1.5px solid #ecdfd2; background:#fff; color:var(--muted);
-  padding:8px 16px; border-radius:999px; cursor:pointer; font-weight:700; font-size:13px; transition:.2s; }
+.cover{ position:relative; margin-bottom:14px; border-radius:18px; overflow:hidden; background:#fff8f0; line-height:0; }
+.cover.has-img{ background:#f3e7db; }
+.cover-emoji{ height:220px; display:flex; align-items:center; justify-content:center; font-size:92px; line-height:1; cursor:zoom-in;
+  background:radial-gradient(circle at 30% 22%, #fffdfa 0%, #fff1e3 45%, #ffe0c9 100%); }
+.cover-emoji:hover{ filter:brightness(1.03); }
+.cover-img{ width:100%; aspect-ratio:16/9; max-height:360px; object-fit:cover; cursor:zoom-in; display:block; }
+.cover .tag{ position:absolute; left:16px; top:16px; display:inline-block; font-size:12px; color:var(--tomato); background:rgba(255,240,234,.94);
+  padding:4px 12px; border-radius:11px; font-weight:600; line-height:1.4; }
+.zoom{ position:absolute; right:14px; bottom:14px; border:0; background:rgba(255,255,255,.92); color:#8b6a4d;
+  font-size:11.5px; padding:5px 11px; border-radius:999px; cursor:pointer; font-family:inherit; line-height:1.5; box-shadow:0 4px 12px rgba(180,120,80,.16); }
+.zoom:hover{ color:var(--tomato); }
+.acts{ display:flex; align-items:center; gap:10px; margin-bottom:18px; }
+.acts-hint{ margin-left:auto; font-size:12.5px; color:#c0aa96; }
+.fav{ border:1.5px solid #ecdfd2; background:#fff; color:var(--muted);
+  padding:8px 14px; border-radius:999px; cursor:pointer; font-weight:700; font-size:13px; transition:.2s; white-space:nowrap; font-family:inherit; }
 .fav:hover{ border-color:var(--orange); color:var(--tomato); }
 .fav.on{ background:linear-gradient(120deg,var(--orange),var(--tomato)); border-color:transparent; color:#fff; }
+
+.dm-btn{ margin-left:12px; border:1.5px solid #ffd9bf; background:#fff3e9; color:var(--tomato); font-size:12.5px;
+  font-weight:800; padding:5px 13px; border-radius:999px; cursor:pointer; font-family:inherit; transition:.2s; }
+.dm-btn:hover{ background:#ffe9d8; }
+
+/* 图片放大预览 */
+.lightbox{ position:fixed; inset:0; z-index:40; display:flex; align-items:center; justify-content:center;
+  background:rgba(30,18,10,.9); cursor:zoom-out; animation:lbIn .18s ease; }
+@keyframes lbIn{ from{ opacity:0; } to{ opacity:1; } }
+.lightbox img{ max-width:90vw; max-height:82vh; border-radius:14px; box-shadow:0 24px 60px rgba(0,0,0,.5); }
+.lb-emoji{ font-size:150px; filter:drop-shadow(0 16px 28px rgba(0,0,0,.45)); }
+.lb-close{ position:absolute; top:22px; right:24px; width:34px; height:34px; display:flex; align-items:center; justify-content:center;
+  border-radius:50%; background:rgba(255,255,255,.18); color:#fff; font-size:15px; }
+.lb-tip{ position:absolute; bottom:28px; left:50%; transform:translateX(-50%); font-size:12px; color:rgba(255,255,255,.7); }
 
 .post h1{ font-size:27px; margin-bottom:10px; line-height:1.3; }
 .meta{ color:#bba; font-size:13px; margin-bottom:22px; }

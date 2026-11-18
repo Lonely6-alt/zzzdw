@@ -44,27 +44,46 @@ public class PostController {
         this.jwtUtil = jwtUtil;
     }
 
-    /** 帖子列表（仅展示审核通过的），可按分类筛选：GET /api/posts?category=面食控 */
+    /** 帖子列表（仅展示审核通过的），可按分类筛选；带 token 时回填我的点赞/收藏状态 */
     @GetMapping("/posts")
-    public List<Post> list(@RequestParam(required = false) String category) {
+    public List<Post> list(@RequestParam(required = false) String category, HttpServletRequest request) {
         LambdaQueryWrapper<Post> wrapper = new LambdaQueryWrapper<Post>()
                 .eq(Post::getStatus, "approved")
                 .eq(category != null && !category.isEmpty(), Post::getCategory, category)
                 .orderByDesc(Post::getId);
         List<Post> list = postService.list(wrapper);
         postService.enrichPosts(list);
+        postService.markInteractions(list, optionalUserId(request));
         return list;
     }
 
     /** 帖子详情：GET /api/posts/1，不存在或已被店家下架（status=off）返回 404 */
     @GetMapping("/posts/{id}")
-    public Post detail(@PathVariable Long id) {
+    public Post detail(@PathVariable Long id, HttpServletRequest request) {
         Post post = postService.getById(id);
         if (post == null || "off".equals(post.getStatus())) {
             throw new BizException(404, "帖子不存在或已下架");
         }
         postService.enrichPosts(java.util.Collections.singletonList(post));
+        postService.markInteractions(java.util.Collections.singletonList(post), optionalUserId(request));
         return post;
+    }
+
+    /**
+     * 可选登录：请求头带有效 token 时返回用户 ID，否则返回 null。
+     * 列表/详情是游客也能看的接口，因此 token 失效不报错，只按未登录处理。
+     */
+    private Long optionalUserId(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        if (header == null || !header.startsWith("Bearer ")) {
+            return null;
+        }
+        try {
+            User user = userService.findByUsername(jwtUtil.verify(header.substring(7)));
+            return user == null ? null : user.getId();
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     /** 发布帖子：POST /api/posts，需要登录（Bearer token），作者取自 token */
@@ -116,6 +135,23 @@ public class PostController {
         Map<String, Object> res = new HashMap<>();
         res.put("favorited", favorited);
         res.put("favoriteCount", post.getFavoriteCount());
+        return res;
+    }
+
+    /** 切换点赞状态：POST /api/posts/1/like，需要登录；返回当前是否已点赞与最新点赞数 */
+    @PostMapping("/posts/{id}/like")
+    public Map<String, Object> toggleLike(@PathVariable Long id, HttpServletRequest request) {
+        String username = jwtUtil.requireUsername(request);
+        User user = userService.findByUsername(username);
+        if (user == null) {
+            throw new BizException(404, "用户不存在");
+        }
+        boolean liked = postService.toggleLike(id, user.getId());
+        Post post = postService.getById(id);
+        postService.markInteractions(java.util.Collections.singletonList(post), user.getId());
+        Map<String, Object> res = new HashMap<>();
+        res.put("liked", liked);
+        res.put("likeCount", post.getLikeCount());
         return res;
     }
 

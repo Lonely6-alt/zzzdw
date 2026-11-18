@@ -118,6 +118,14 @@ public class ChatController {
         return res;
     }
 
+    /** 在线用户 ID 列表（会话列表在线圆点用）：GET /api/chat/online */
+    @GetMapping("/online")
+    public Map<String, Object> online() {
+        Map<String, Object> res = new HashMap<>();
+        res.put("online", ws.onlineUserIds());
+        return res;
+    }
+
     /** 会话列表：GET /api/chat/sessions */
     @GetMapping("/sessions")
     public List<Map<String, Object>> sessions(HttpServletRequest request) {
