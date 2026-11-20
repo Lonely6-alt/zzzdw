@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4efff"/><stop offset="1" stop-color="#d5c6f0"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg)"/>
+  <circle cx="58" cy="64" r="16" fill="#fff" opacity=".45"/>
+  <circle cx="350" cy="86" r="10" fill="#fff" opacity=".35"/>
+  <circle cx="334" cy="238" r="18" fill="#fff" opacity=".25"/>
+  <!-- 热气 -->
+  <g stroke="#fff" stroke-width="6" fill="none" stroke-linecap="round" opacity=".7">
+    <path d="M176 84 q-12 -16 0 -30 q12 -14 0 -28"/>
+    <path d="M224 84 q-12 -16 0 -30 q12 -14 0 -28"/>
+  </g>
+  <!-- 碟子 -->
+  <ellipse cx="200" cy="238" rx="120" ry="26" fill="#fff" stroke="#6b4230" stroke-width="6"/>
+  <ellipse cx="200" cy="234" rx="86" ry="16" fill="#e9def5"/>
+  <!-- 杯把 -->
+  <path d="M272 150 q54 -6 50 36 q-4 34 -50 30" fill="none" stroke="#6b4230" stroke-width="14" stroke-linecap="round"/>
+  <path d="M272 150 q54 -6 50 36 q-4 34 -50 30" fill="none" stroke="#fffafd" stroke-width="7" stroke-linecap="round"/>
+  <!-- 杯身 -->
+  <path d="M118 140 L132 224 Q200 248 268 224 L282 140 Z" fill="#fffafd" stroke="#6b4230" stroke-width="6" stroke-linejoin="round"/>
+  <!-- 咖啡液面 -->
+  <ellipse cx="200" cy="140" rx="82" ry="24" fill="#a86b3c" stroke="#6b4230" stroke-width="6"/>
+  <ellipse cx="200" cy="140" rx="70" ry="17" fill="#c68a55"/>
+  <!-- 拉花 -->
+  <path d="M200 130 q-30 4 -22 18 q10 14 22 2 q12 12 22 -2 q8 -14 -22 -18Z" fill="#fff6ea" opacity=".95"/>
+  <path d="M200 154 q0 8 0 12" stroke="#fff6ea" stroke-width="4" stroke-linecap="round"/>
+  <!-- 糖包 -->
+  <g transform="translate(70,196)">
+    <rect x="-22" y="-20" width="44" height="40" rx="6" fill="#ff9a6b" stroke="#6b4230" stroke-width="4"/>
+    <path d="M-22 -8 L22 -8" stroke="#6b4230" stroke-width="3"/>
+  </g>
+</svg>

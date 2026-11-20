@@ -6,7 +6,7 @@ import { useReviews } from '../composables/useReviews.js'
 import { useFavorites } from '../composables/useFavorites.js'
 import { useLikes } from '../composables/useLikes.js'
 import { useToast } from '../composables/useToast.js'
-import { CAT_NAMES, catIcon, catBg, catAccent, catSoft } from '../data/categories.js'
+import { CAT_NAMES, catIcon, catBg, catAccent, catSoft, catPhoto } from '../data/categories.js'
 
 const router = useRouter()
 const { toast } = useToast()
@@ -26,7 +26,7 @@ const PAGE_SIZE = 12
 const shownCount = ref(PAGE_SIZE)
 const loadingMore = ref(false)
 
-const brokenImgs = ref(new Set())
+const brokenCats = ref(new Set())   // 分类插画加载失败的分类名
 
 const TABS = [
   { key: 'hot', label: '热门', emoji: '🔥' },
@@ -62,12 +62,14 @@ function ratingOf(p) {
   return displayRating(p) || 0
 }
 function imgOf(p) {
-  return p.imageUrl && !brokenImgs.value.has(Number(p.id)) ? p.imageUrl : ''
+  // 卡片封面统一用分类卡通插画，不使用真实照片；本地 SVG 加载失败则回退渐变 + emoji
+  const photo = catPhoto(p.category)
+  return photo && !brokenCats.value.has(p.category) ? photo : ''
 }
-function onImgError(id) {
-  const next = new Set(brokenImgs.value)
-  next.add(Number(id))
-  brokenImgs.value = next
+function onImgError(p) {
+  const next = new Set(brokenCats.value)
+  next.add(p.category)
+  brokenCats.value = next
 }
 
 function escapeHtml(s) {
@@ -371,9 +373,14 @@ async function publish() {
             :alt="p.title"
             loading="lazy"
             decoding="async"
-            @error="onImgError(p.id)"
+            @error="onImgError(p)"
           />
-          <span v-else class="cover-emoji">{{ p.emoji }}</span>
+          <div v-else class="cover-fallback">
+            <span class="cover-glow"></span>
+            <span class="cover-emoji">{{ p.emoji || catIcon(p.category) }}</span>
+          </div>
+          <span class="cover-shade"></span>
+          <span class="cover-cat">{{ catIcon(p.category) }} {{ p.category }}</span>
 
           <button
             class="fav-btn"
@@ -548,10 +555,22 @@ async function publish() {
 
 .cover{ position:relative; width:100%; aspect-ratio:4 / 3; overflow:hidden;
   display:flex; align-items:center; justify-content:center; }
-.cover img{ width:100%; height:100%; object-fit:cover; display:block; transition:transform .35s; }
-.card:hover .cover img{ transform:scale(1.05); }
-.cover-emoji{ font-size:52px; line-height:1; filter:drop-shadow(0 8px 12px rgba(160,90,50,.22)); transition:transform .3s; }
-.card:hover .cover-emoji{ transform:scale(1.1) rotate(-4deg); }
+.cover img{ width:100%; height:100%; object-fit:cover; display:block; transition:transform .45s ease; }
+.card:hover .cover img{ transform:scale(1.08); }
+/* 无实拍图时的美化兜底：柔光圆斑 + 玻璃底座 + emoji */
+.cover-fallback{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.cover-glow{ position:absolute; width:150px; height:150px; border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.75),rgba(255,255,255,0) 70%); }
+.cover-emoji{ position:relative; font-size:58px; line-height:1; padding:18px; border-radius:50%;
+  background:rgba(255,255,255,.55); box-shadow:0 10px 26px rgba(160,90,50,.18), inset 0 0 0 1.5px rgba(255,255,255,.7);
+  backdrop-filter:blur(2px); transition:transform .35s; }
+.card:hover .cover-emoji{ transform:scale(1.12) rotate(-5deg); }
+/* 底部渐变压暗，让分类角标清晰 */
+.cover-shade{ position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(to top,rgba(60,30,15,.42),rgba(60,30,15,0) 42%); }
+.cover-cat{ position:absolute; left:10px; bottom:9px; z-index:2; pointer-events:none;
+  font-size:11px; font-weight:700; color:#fff; letter-spacing:.2px;
+  padding:3px 9px; border-radius:999px; background:rgba(40,20,10,.34); backdrop-filter:blur(4px); }
 .fav-btn{ position:absolute; top:10px; right:10px; width:30px; height:30px; border-radius:50%; border:0; cursor:pointer;
   font-size:14px; line-height:1; color:#a98f78; background:rgba(255,255,255,.92); transition:.2s; }
 .fav-btn:hover{ transform:scale(1.1); color:var(--orange); }

@@ -6,6 +6,7 @@ import { useLikes } from '../composables/useLikes.js'
 import { useReviews } from '../composables/useReviews.js'
 import { useToast } from '../composables/useToast.js'
 import { authUser, getToken } from '../composables/useAuth.js'
+import { catPhoto } from '../data/categories.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -29,12 +30,22 @@ const myComment = ref('')
 const reviewMsg = ref('')
 const preview = ref(false)
 const brokenImg = ref(false)
+const brokenCatPhoto = ref(false)
 const submitting = ref(false)
 
 const reviewsList = computed(() => (post.value ? getReviews(post.value.id) : []))
 const avg = computed(() => (post.value ? displayRating(post.value) : 0))
 const likeCount = computed(() => (post.value ? countOf(post.value.id, post.value.likeCount || 0) : 0))
-const coverImg = computed(() => (post.value && post.value.imageUrl && !brokenImg.value ? post.value.imageUrl : ''))
+const coverImg = computed(() => {
+  if (!post.value) return ''
+  if (post.value.imageUrl && !brokenImg.value) return post.value.imageUrl
+  const photo = catPhoto(post.value.category)
+  return photo && !brokenCatPhoto.value ? photo : ''
+})
+function onCoverError() {
+  if (post.value?.imageUrl && !brokenImg.value) brokenImg.value = true
+  else brokenCatPhoto.value = true
+}
 
 onMounted(async () => {
   loading.value = true
@@ -118,7 +129,7 @@ function starStr(n) {
 
     <article v-else-if="post" class="post">
       <div class="cover" :class="{ 'has-img': !!coverImg }">
-        <img v-if="coverImg" class="cover-img" :src="coverImg" :alt="post.title" @error="brokenImg = true" @click="preview = true" />
+        <img v-if="coverImg" class="cover-img" :src="coverImg" :alt="post.title" @error="onCoverError" @click="preview = true" />
         <div v-else class="cover-emoji" @click="preview = true">{{ post.emoji }}</div>
         <span class="tag">{{ post.category }}</span>
         <button class="zoom" type="button" @click="preview = true">🔍 看大图</button>

@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getToken } from '../composables/useAuth.js'
 import { useToast } from '../composables/useToast.js'
+import { catPhoto, catBg, catIcon } from '../data/categories.js'
 
 const router = useRouter()
 const { toast } = useToast()
@@ -16,6 +17,24 @@ const opened = ref(false)
 const shop = ref(null)
 const posts = ref([])
 const editing = ref(false)
+const brokenPosts = ref(new Set())
+const brokenCats = ref(new Set())
+
+// 菜品封面：自己的图 → 分类实拍图 → 渐变+emoji
+function coverOf(p) {
+  const id = Number(p.id)
+  if (p.imageUrl && !brokenPosts.value.has(id)) return p.imageUrl
+  const photo = catPhoto(p.category)
+  return photo && !brokenCats.value.has(p.category) ? photo : ''
+}
+function onCoverError(p) {
+  const id = Number(p.id)
+  if (p.imageUrl && !brokenPosts.value.has(id)) {
+    const s = new Set(brokenPosts.value); s.add(id); brokenPosts.value = s
+  } else {
+    const s = new Set(brokenCats.value); s.add(p.category); brokenCats.value = s
+  }
+}
 
 // 开店 / 改资料表单
 const form = ref({
@@ -210,7 +229,10 @@ onMounted(load)
 
         <div v-if="posts.length" class="grid">
           <article v-for="p in posts" :key="p.id" class="card" @click="openPost(p.id)">
-            <div class="c-emoji">{{ p.emoji }}</div>
+            <div class="c-cover" :style="{ background: catBg(p.category) }">
+              <img v-if="coverOf(p)" :src="coverOf(p)" :alt="p.title" loading="lazy" @error="onCoverError(p)" />
+              <div v-else class="c-fallback"><span class="c-glow"></span><span class="c-emoji">{{ p.emoji || catIcon(p.category) }}</span></div>
+            </div>
             <div class="c-body">
               <div class="c-top">
                 <span class="tag">{{ p.category }}</span>
@@ -371,7 +393,16 @@ onMounted(load)
   animation:cardIn .45s backwards; display:flex; flex-direction:column; }
 .card:hover{ transform:translateY(-4px); box-shadow:0 14px 28px rgba(255,90,60,.18); }
 @keyframes cardIn{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:translateY(0); } }
-.c-emoji{ font-size:40px; padding:18px 18px 0; }
+.c-cover{ position:relative; width:100%; aspect-ratio:4/3; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+.c-cover img{ width:100%; height:100%; object-fit:cover; display:block; transition:transform .45s; }
+.card:hover .c-cover img{ transform:scale(1.08); }
+.c-fallback{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+.c-glow{ position:absolute; width:140px; height:140px; border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.75),rgba(255,255,255,0) 70%); }
+.c-emoji{ position:relative; font-size:52px; padding:16px; border-radius:50%;
+  background:rgba(255,255,255,.55); box-shadow:0 10px 24px rgba(160,90,50,.18), inset 0 0 0 1.5px rgba(255,255,255,.7);
+  transition:transform .35s; }
+.card:hover .c-emoji{ transform:scale(1.1) rotate(-5deg); }
 .c-body{ padding:14px 18px 18px; }
 .c-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
 .tag{ display:inline-block; font-size:11.5px; color:var(--tomato); background:#fff0ea; padding:3px 9px; border-radius:10px; }

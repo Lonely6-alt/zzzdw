@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff2ef"/><stop offset="1" stop-color="#ffc4b8"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg)"/>
+  <circle cx="58" cy="64" r="16" fill="#fff" opacity=".4"/>
+  <circle cx="348" cy="88" r="10" fill="#fff" opacity=".3"/>
+  <circle cx="332" cy="238" r="18" fill="#fff" opacity=".22"/>
+  <!-- 热气 -->
+  <g stroke="#fff" stroke-width="6" fill="none" stroke-linecap="round" opacity=".75">
+    <path d="M150 82 q-14 -16 0 -32 q14 -16 0 -28"/>
+    <path d="M200 70 q-14 -16 0 -32 q14 -16 0 -26"/>
+    <path d="M250 82 q-14 -16 0 -32 q14 -16 0 -28"/>
+  </g>
+  <!-- 锅 -->
+  <ellipse cx="200" cy="150" rx="130" ry="42" fill="#3a3a42" stroke="#2a1f1a" stroke-width="6"/>
+  <ellipse cx="200" cy="146" rx="118" ry="34" fill="#d8412f" stroke="#2a1f1a" stroke-width="4"/>
+  <!-- 隔板（鸳鸯） -->
+  <path d="M200 114 L200 178" stroke="#f0d9a0" stroke-width="7" stroke-linecap="round"/>
+  <path d="M84 146 q116 -34 232 0" stroke="#f0d9a0" stroke-width="7" fill="none"/>
+  <!-- 红汤调料 -->
+  <g fill="#ff6a3c">
+    <circle cx="130" cy="140" r="7"/><circle cx="160" cy="158" r="6"/><circle cx="112" cy="160" r="5"/>
+  </g>
+  <g fill="#ffd23c" opacity=".9">
+    <circle cx="146" cy="150" r="3"/><circle cx="124" cy="150" r="3"/>
+  </g>
+  <!-- 清汤侧食材 -->
+  <!-- 蘑菇 -->
+  <g transform="translate(248,138)">
+    <ellipse rx="18" ry="11" fill="#e8d7b8" stroke="#6b4230" stroke-width="4"/>
+    <rect x="-6" y="6" width="12" height="16" rx="5" fill="#f0e4cc" stroke="#6b4230" stroke-width="4"/>
+  </g>
+  <!-- 肉丸 -->
+  <circle cx="292" cy="152" r="14" fill="#b5562f" stroke="#6b4230" stroke-width="4"/>
+  <circle cx="288" cy="148" r="5" fill="#d98a6a"/>
+  <!-- 玉米段 -->
+  <g transform="translate(240,166) rotate(20)">
+    <rect x="-18" y="-9" width="36" height="18" rx="8" fill="#ffc933" stroke="#6b4230" stroke-width="4"/>
+    <g fill="#fff3b0"><circle cx="-9" cy="0" r="2.5"/><circle cx="0" cy="0" r="2.5"/><circle cx="9" cy="0" r="2.5"/></g>
+  </g>
+  <!-- 香菜 -->
+  <g fill="#5aa84f">
+    <path d="M166 152 q10 -12 20 0 q-10 6 -20 0Z"/>
+    <path d="M280 138 q8 -10 16 0 q-8 6 -16 0Z"/>
+  </g>
+  <!-- 锅耳 -->
+  <path d="M74 138 q-26 -6 -22 16 q4 16 22 12" fill="none" stroke="#2a1f1a" stroke-width="10" stroke-linecap="round"/>
+  <path d="M326 138 q26 -6 22 16 q-4 16 -22 12" fill="none" stroke="#2a1f1a" stroke-width="10" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eaf4ff"/><stop offset="1" stop-color="#bcd9f7"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg)"/>
+  <circle cx="60" cy="64" r="16" fill="#fff" opacity=".4"/>
+  <circle cx="348" cy="90" r="10" fill="#fff" opacity=".35"/>
+  <circle cx="330" cy="236" r="18" fill="#fff" opacity=".28"/>
+  <!-- 木盘 -->
+  <ellipse cx="200" cy="222" rx="150" ry="42" fill="#c98f5a" stroke="#6b4230" stroke-width="6"/>
+  <ellipse cx="200" cy="214" rx="150" ry="42" fill="#e3ad76" stroke="#6b4230" stroke-width="6"/>
+  <!-- 寿司1 三文鱼握寿司 -->
+  <g transform="translate(112,168)">
+    <ellipse cx="0" cy="14" rx="40" ry="26" fill="#fffaf0" stroke="#6b4230" stroke-width="5"/>
+    <path d="M-42 6 Q0 -30 42 6 Q0 -8 -42 6Z" fill="#ff8a5c" stroke="#6b4230" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M-30 0 Q0 -18 30 0" stroke="#ffc1a3" stroke-width="4" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- 寿司2 金枪鱼握寿司 -->
+  <g transform="translate(208,160)">
+    <ellipse cx="0" cy="14" rx="40" ry="26" fill="#fffaf0" stroke="#6b4230" stroke-width="5"/>
+    <path d="M-42 6 Q0 -30 42 6 Q0 -8 -42 6Z" fill="#e8576b" stroke="#6b4230" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M-28 0 Q0 -16 28 0" stroke="#f79aa8" stroke-width="4" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- 卷寿司 -->
+  <g transform="translate(296,176)">
+    <ellipse cx="0" cy="8" rx="34" ry="30" fill="#2f4a3c" stroke="#6b4230" stroke-width="5"/>
+    <ellipse cx="0" cy="8" rx="25" ry="22" fill="#fffaf0"/>
+    <circle cx="0" cy="8" r="10" fill="#ff8a5c"/>
+    <circle cx="-9" cy="8" r="4" fill="#7cc47f"/><circle cx="9" cy="10" r="4" fill="#7cc47f"/>
+  </g>
+  <!-- 芥末 -->
+  <path d="M148 232 q14 -18 28 0 q-14 10 -28 0Z" fill="#9ac53f" stroke="#6b4230" stroke-width="4"/>
+</svg>

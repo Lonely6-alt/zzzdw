@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff2f9"/><stop offset="1" stop-color="#ffd0e6"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg)"/>
+  <circle cx="58" cy="64" r="16" fill="#fff" opacity=".5"/>
+  <circle cx="350" cy="86" r="10" fill="#fff" opacity=".4"/>
+  <circle cx="334" cy="236" r="18" fill="#fff" opacity=".28"/>
+  <circle cx="74" cy="228" r="8" fill="#fff" opacity=".35"/>
+  <!-- 盘子 -->
+  <ellipse cx="200" cy="244" rx="140" ry="30" fill="#fff" stroke="#6b4230" stroke-width="6"/>
+  <ellipse cx="200" cy="240" rx="112" ry="20" fill="#fbe4ee"/>
+  <!-- 蛋糕主体 -->
+  <g transform="translate(200,150)">
+    <path d="M-72 84 L-72 -6 Q0 -26 72 -6 L72 84 Q0 100 -72 84Z" fill="#f7c9a3" stroke="#6b4230" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M-72 20 Q0 36 72 20 L72 44 Q0 60 -72 44Z" fill="#fff0f5"/>
+    <!-- 奶油层 -->
+    <path d="M-76 -4 q10 -22 24 -8 q10 -22 24 -8 q12 -22 26 -8 q12 -22 26 -6 q12 -20 26 -6 q10 -18 24 0 q12 -14 20 8 q-110 34 -220 0Z" fill="#fffafd" stroke="#6b4230" stroke-width="5" stroke-linejoin="round"/>
+    <!-- 草莓 -->
+    <g transform="translate(0,-30)">
+      <path d="M0 -4 q-22 6 -18 30 q18 22 36 0 q4 -24 -18 -30Z" fill="#e8445c" stroke="#6b4230" stroke-width="4"/>
+      <path d="M-16 -2 q16 -12 32 0 q-16 -2 -32 0Z" fill="#5aa84f"/>
+      <g fill="#fff"><circle cx="-6" cy="14" r="2"/><circle cx="6" cy="14" r="2"/><circle cx="0" cy="24" r="2"/></g>
+    </g>
+    <!-- 蓝莓 -->
+    <circle cx="-46" cy="-14" r="9" fill="#5a5bb0" stroke="#6b4230" stroke-width="3"/>
+    <circle cx="46" cy="-14" r="9" fill="#5a5bb0" stroke="#6b4230" stroke-width="3"/>
+  </g>
+  <!-- 叉子 -->
+  <g transform="translate(340,180) rotate(16)" stroke="#b9a0ab" stroke-width="6" fill="none" stroke-linecap="round">
+    <line x1="0" y1="0" x2="0" y2="76"/>
+    <line x1="-12" y1="0" x2="-12" y2="22"/>
+    <line x1="0" y1="0" x2="0" y2="22"/>
+    <line x1="12" y1="0" x2="12" y2="22"/>
+  </g>
+</svg>

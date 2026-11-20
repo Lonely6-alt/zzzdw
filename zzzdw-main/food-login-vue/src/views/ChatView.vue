@@ -25,10 +25,19 @@ const wsStatus = ref('offline') // connecting | online | offline
 // 输入增强：表情 / 图片 / 字数
 const MAX_LEN = 1000
 const showEmoji = ref(false)
+const emojiTab = ref('food')
 const uploading = ref(false)
 const imageInput = ref(null)
 const inputEl = ref(null)
-const CHAT_EMOJIS = ['🍜', '🍣', '🍔', '🍰', '☕', '🍢', '🍲', '🥗', '🍗', '🍕', '🍦', '🧋', '😋', '👍', '🎉', '❤️', '😂', '🙏', '🥢', '🍻']
+// 表情包按分类组织，点分类标签切换
+const EMOJI_GROUPS = {
+  food: { label: '🍜 美食', list: ['🍜', '🍣', '🍔', '🍰', '☕', '🍢', '🍲', '🥗', '🍗', '🍕', '🍦', '🧋', '🥟', '🍡', '🍩', '🍪', '🌮', '🌯', '🥪', '🥞', '🧀', '🍉', '🍓', '🍒', '🥑', '🍌', '🍇', '🍑'] },
+  face: { label: '😀 表情', list: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😍', '🥰', '😘', '😋', '😜', '🤪', '😝', '🤗', '🤭', '🤔', '🤨', '😐', '😑', '😶', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤩', '🥳', '😎', '🤓', '🧐'] },
+  gesture: { label: '👍 手势', list: ['👍', '👎', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '👇', '☝️', '👋', '🤚', '🖐️', '✋', '🖖', '👏', '🙌', '🤝', '🙏', '💪', '🫰', '👊', '✊', '🤛', '🤜'] },
+  heart: { label: '❤️ 爱心', list: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '♥️'] },
+  life: { label: '🎉 生活', list: ['🎉', '🎊', '🎂', '🎁', '🎈', '🌹', '🌸', '🌻', '🌈', '⭐', '✨', '🔥', '💫', '💡', '☀️', '🌙', '⚡', '💯', '✅', '🎵', '🎶', '🍻', '🥂', '🍾', '🏆', '🥇', '🚀', '👀', '💬', '🛒'] }
+}
+const CHAT_EMOJIS = EMOJI_GROUPS.food.list // 兼容旧引用
 
 // 会话列表在线状态（WebSocket 上线/下线事件 + 首屏拉取）
 const onlineIds = ref(new Set())
@@ -277,6 +286,60 @@ function insertEmoji(e) {
   nextTick(() => inputEl.value?.focus())
 }
 function pickImage() { imageInput.value?.click() }
+
+/* ---------------- 消息右键 / 长按菜单 ---------------- */
+const msgMenu = ref({ show: false, x: 0, y: 0, msg: null })
+let pressTimer = null
+function openMsgMenu(e, m) {
+  // 桌面右键 / 移动长按共用：定位在触点上方，钳制在视口内（菜单 transform 为居中底部锚点）
+  const x = Math.max(72, Math.min(e.clientX || 0, window.innerWidth - 72))
+  const y = Math.max(104, Math.min(e.clientY || 0, window.innerHeight - 12))
+  msgMenu.value = { show: true, x, y, msg: m }
+}
+function closeMsgMenu() { msgMenu.value.show = false }
+function onTouchStart(e, m) {
+  const t = e.touches[0]
+  clearTimeout(pressTimer)
+  pressTimer = setTimeout(() => openMsgMenu({ clientX: t.clientX, clientY: t.clientY }, m), 500)
+}
+function onTouchEnd() { clearTimeout(pressTimer) }
+function onTouchMove() { clearTimeout(pressTimer) }
+async function copyMsgText(m) {
+  const text = msgOf(m).text || msgOf(m).url || ''
+  closeMsgMenu()
+  try {
+    await navigator.clipboard.writeText(text)
+    toast('已复制', 'success')
+  } catch {
+    // 剪贴板不可用时回退
+    const ta = document.createElement('textarea')
+    ta.value = text; document.body.appendChild(ta); ta.select()
+    try { document.execCommand('copy'); toast('已复制', 'success') } catch { toast('复制失败', 'error') }
+    document.body.removeChild(ta)
+  }
+}
+async function deleteMsg() {
+  const m = msgMenu.value.msg
+  if (!m || m.msgId == null) { closeMsgMenu(); return }
+  closeMsgMenu()
+  try {
+    const url = activeType.value === 'private'
+      ? `${API}/sessions/${activeId.value}/messages/${m.msgId}`
+      : `${API}/groups/${activeId.value}/messages/${m.msgId}`
+    const r = await fetch(url, { method: 'DELETE', headers: h() })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok) throw new Error(d.message || '删除失败')
+    // 立即从本地列表移除，WS 事件会同步其他端
+    messages.value = messages.value.filter(x => Number(x.msgId) !== Number(m.msgId))
+    loadMessages(true)
+    toast('消息已删除', 'success')
+  } catch (e) {
+    toast(e.message, 'error')
+  }
+}
+function removeMsgLocal(msgId) {
+  messages.value = messages.value.filter(x => Number(x.msgId) !== Number(msgId))
+}
 async function onImagePicked(e) {
   const file = e.target?.files?.[0]
   if (e.target) e.target.value = ''
@@ -407,6 +470,27 @@ function handleWsEvent(d) {
     if (d.online) set.add(Number(d.userId))
     else set.delete(Number(d.userId))
     onlineIds.value = set
+    return
+  }
+
+  // 消息删除广播（私聊 / 群聊）：当前会话正在看则同步移除气泡
+  if (d.type === 'private_deleted' || d.type === 'group_deleted') {
+    const chatType = d.type === 'private_deleted' ? 'private' : 'group'
+    const same = activeType.value === chatType && Number(activeId.value) === Number(
+      d.type === 'private_deleted' ? d.sessionId : d.groupId)
+    if (same) {
+      removeMsgLocal(d.msgId)
+      loadMessages(true)
+    } else {
+      // 会话列表摘要回退
+      if (d.type === 'private_deleted') {
+        const s = sessions.value.find(x => Number(x.sessionId) === Number(d.sessionId))
+        if (s) loadSessions()
+      } else {
+        const g = groups.value.find(x => Number(x.groupId) === Number(d.groupId))
+        if (g) loadGroups()
+      }
+    }
     return
   }
 
@@ -670,6 +754,10 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
               :key="m.msgId"
               class="row"
               :class="{ mine: isMine(m) }"
+              @contextmenu.prevent="openMsgMenu($event, m)"
+              @touchstart.passive="onTouchStart($event, m)"
+              @touchend.passive="onTouchEnd"
+              @touchmove.passive="onTouchMove"
             >
               <div class="bubble" :class="{ mine: isMine(m) }">
                 <span v-if="activeType === 'group' && !isMine(m)" class="b-name">{{ m.senderName }}</span>
@@ -693,8 +781,20 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
               <button class="t-btn" type="button" title="表情" @click="showEmoji = !showEmoji">😊</button>
               <button class="t-btn" type="button" title="发送菜品图片" :disabled="uploading" @click="pickImage">🖼️</button>
               <input ref="imageInput" class="hidden-file" type="file" accept="image/*" @change="onImagePicked" />
-              <div v-if="showEmoji" class="emoji-pop">
-                <button v-for="e in CHAT_EMOJIS" :key="e" type="button" @click="insertEmoji(e)">{{ e }}</button>
+              <div v-if="showEmoji" class="emoji-pop" @click.stop>
+                <div class="emoji-tabs">
+                  <button
+                    v-for="(g, key) in EMOJI_GROUPS"
+                    :key="key"
+                    type="button"
+                    class="emoji-tab"
+                    :class="{ active: emojiTab === key }"
+                    @click="emojiTab = key"
+                  >{{ g.label }}</button>
+                </div>
+                <div class="emoji-grid">
+                  <button v-for="e in EMOJI_GROUPS[emojiTab].list" :key="e" type="button" @click="insertEmoji(e)">{{ e }}</button>
+                </div>
               </div>
             </div>
             <input
@@ -807,6 +907,25 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
         </div>
       </div>
     </div>
+
+    <!-- 消息长按/右键菜单 -->
+    <template v-if="msgMenu.show">
+      <div class="msg-menu-mask" @click="closeMsgMenu" @contextmenu.prevent="closeMsgMenu"></div>
+      <div class="msg-menu" :style="{ left: msgMenu.x + 'px', top: msgMenu.y + 'px' }" @click.stop>
+        <button type="button" @click="copyMsgText(msgMenu.msg)">
+          <span>📋</span> 复制
+        </button>
+        <button
+          v-if="msgMenu.msg && Number(msgMenu.msg.senderId) === Number(myId.value)"
+          type="button"
+          class="danger"
+          @click="deleteMsg"
+        >
+          <span>🗑️</span> 删除
+        </button>
+        <p v-else class="msg-menu-hint">只能删除自己发送的消息</p>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -891,7 +1010,7 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
 .c-box::before{ content:'🍜  🍣  🍔  🍰  ☕  🍢  🍲  🥟  🍡  🍟  🧋  🍱  🍜  🍣  🍔  🍰';
   position:absolute; inset:-16px; font-size:30px; line-height:2.4; word-spacing:24px; opacity:.045;
   transform:rotate(-8deg); pointer-events:none; user-select:none; z-index:0; }
-.row{ display:flex; margin-bottom:14px; position:relative; z-index:1; }
+.row{ display:flex; margin-bottom:14px; position:relative; z-index:1; user-select:none; -webkit-touch-callout:none; }
 .row.mine{ justify-content:flex-end; }
 .bubble{ max-width:72%; background:#fffdf9; border:1.5px solid #f3e2d0; border-radius:15px 15px 15px 5px;
   padding:10px 14px; box-shadow:0 2px 7px rgba(126,90,62,.06); }
@@ -918,11 +1037,27 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
 .t-btn:hover{ border-color:var(--orange,#ff9a52); background:#fff1e2; transform:translateY(-1px); }
 .t-btn:disabled{ opacity:.5; cursor:not-allowed; }
 .hidden-file{ display:none; }
-.emoji-pop{ position:absolute; bottom:46px; left:0; z-index:30; width:240px; display:grid;
-  grid-template-columns:repeat(6,1fr); gap:3px; padding:9px; background:#fff; border:1.5px solid #f0e6db;
+.emoji-pop{ position:absolute; bottom:46px; left:0; z-index:30; width:300px; padding:9px; background:#fff; border:1.5px solid #f0e6db;
   border-radius:14px; box-shadow:0 12px 28px rgba(126,90,62,.18); }
-.emoji-pop button{ border:none; background:transparent; font-size:19px; padding:5px 0; border-radius:8px; cursor:pointer; }
-.emoji-pop button:hover{ background:#fff1e2; }
+.emoji-tabs{ display:flex; gap:4px; flex-wrap:wrap; border-bottom:1.5px solid #f4e9dd; padding-bottom:8px; margin-bottom:8px; }
+.emoji-tab{ border:none; background:#fff5ec; color:#8a6a52; font-size:11.5px; font-weight:700; padding:5px 9px; border-radius:999px;
+  cursor:pointer; font-family:inherit; transition:.2s; }
+.emoji-tab:hover{ background:#ffe6d2; }
+.emoji-tab.active{ background:linear-gradient(120deg,#ff9a52,#ff5f3d); color:#fff; }
+.emoji-grid{ display:grid; grid-template-columns:repeat(8,1fr); gap:2px; max-height:216px; overflow-y:auto; }
+.emoji-grid button{ border:none; background:transparent; font-size:20px; padding:5px 0; border-radius:8px; cursor:pointer; line-height:1; }
+.emoji-grid button:hover{ background:#fff1e2; transform:scale(1.12); }
+
+/* 消息右键/长按菜单 */
+.msg-menu-mask{ position:fixed; inset:0; z-index:9000; background:transparent; }
+.msg-menu{ position:fixed; z-index:9001; min-width:132px; padding:6px; background:#fff; border:1.5px solid #f0e6db;
+  border-radius:12px; box-shadow:0 12px 30px rgba(126,90,62,.24); transform:translate(-50%,-100%); }
+.msg-menu button{ display:flex; align-items:center; gap:8px; width:100%; border:none; background:transparent; cursor:pointer;
+  font-size:13px; font-family:inherit; color:#4a3526; padding:9px 12px; border-radius:8px; text-align:left; }
+.msg-menu button:hover{ background:#fff1e2; }
+.msg-menu button.danger{ color:#e33b2e; }
+.msg-menu button.danger:hover{ background:#ffeaea; }
+.msg-menu-hint{ margin:4px 8px 6px; font-size:11px; color:#b99b82; line-height:1.5; }
 .c-count{ font-size:11px; color:#b99b82; flex-shrink:0; font-variant-numeric:tabular-nums; }
 .c-input input{ flex:1; min-width:0; border:1.5px solid #ecdfd2; border-radius:999px; padding:10px 16px; font-size:14px; outline:none;
   transition:border-color .2s; font-family:inherit; }

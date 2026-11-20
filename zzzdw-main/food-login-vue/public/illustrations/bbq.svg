@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffeee7"/><stop offset="1" stop-color="#ffc9ab"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg)"/>
+  <circle cx="58" cy="64" r="16" fill="#fff" opacity=".4"/>
+  <circle cx="348" cy="88" r="10" fill="#fff" opacity=".3"/>
+  <circle cx="332" cy="238" r="18" fill="#fff" opacity=".22"/>
+  <!-- 烤炉 -->
+  <g transform="translate(200,196)">
+    <path d="M-150 0 Q0 -30 150 0 L138 62 Q0 88 -138 62Z" fill="#4a4a52" stroke="#3a2a22" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M-142 12 Q0 -14 142 12" stroke="#ff7a3c" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M-120 40 Q0 20 120 40" stroke="#ff9a4c" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <g stroke="#ffb347" stroke-width="6" stroke-linecap="round">
+      <path d="M-90 30 l-8 -26"/><path d="M-30 34 l4 -28"/><path d="M36 34 l-4 -28"/><path d="M96 30 l8 -26"/>
+    </g>
+    <!-- 炉脚 -->
+    <line x1="-110" y1="70" x2="-120" y2="102" stroke="#3a2a22" stroke-width="10" stroke-linecap="round"/>
+    <line x1="110" y1="70" x2="120" y2="102" stroke="#3a2a22" stroke-width="10" stroke-linecap="round"/>
+  </g>
+  <!-- 烤串1 -->
+  <g transform="translate(150,140) rotate(-14)">
+    <line x1="-70" y1="0" x2="86" y2="0" stroke="#c99a5e" stroke-width="7" stroke-linecap="round"/>
+    <g stroke="#6b4230" stroke-width="4">
+      <rect x="-58" y="-16" width="30" height="32" rx="8" fill="#b5562f"/>
+      <rect x="-20" y="-16" width="30" height="32" rx="8" fill="#c96438"/>
+      <rect x="18" y="-16" width="30" height="32" rx="8" fill="#b5562f"/>
+      <rect x="52" y="-16" width="26" height="32" rx="8" fill="#7bab48"/>
+    </g>
+    <g stroke="#e08a5a" stroke-width="3" stroke-linecap="round">
+      <path d="M-50 -8 l16 0"/><path d="M-12 -8 l16 0"/><path d="M26 -8 l16 0"/>
+    </g>
+  </g>
+  <!-- 烤串2 -->
+  <g transform="translate(250,116) rotate(10)">
+    <line x1="-70" y1="0" x2="86" y2="0" stroke="#c99a5e" stroke-width="7" stroke-linecap="round"/>
+    <g stroke="#6b4230" stroke-width="4">
+      <rect x="-58" y="-16" width="30" height="32" rx="8" fill="#c96438"/>
+      <rect x="-20" y="-16" width="30" height="32" rx="8" fill="#d98048"/>
+      <rect x="18" y="-16" width="30" height="32" rx="8" fill="#c96438"/>
+      <rect x="52" y="-16" width="26" height="32" rx="8" fill="#e8b33c"/>
+    </g>
+  </g>
+</svg>

@@ -146,6 +146,13 @@ function goProfile() {
 function goRanking() {
   router.push('/ranking')
 }
+// 地址跳转导航：高德 URI 在手机上唤起 App、桌面端打开网页，keyword 为店铺名+地址
+function navigate(name, address) {
+  const kw = [name, address].filter(Boolean).join(' ')
+  if (!kw) return
+  const url = `https://uri.amap.com/search?keyword=${encodeURIComponent(kw)}&callnative=1&src=food-community`
+  window.open(url, '_blank')
+}
 
 onMounted(() => {
   // 预选评分最高的店铺，让面板一进来就有内容
@@ -245,7 +252,11 @@ onMounted(() => {
           </div>
           <div class="sp-rating">★ {{ selected.rating.toFixed(1) }}<small> 推荐指数</small></div>
           <div class="sp-row"><b>招牌</b>{{ selected.dish }}</div>
-          <div class="sp-row"><b>地址</b>{{ selected.address }}</div>
+          <div class="sp-row sp-address">
+            <b>地址</b>
+            <span>{{ selected.address }}</span>
+            <button class="sp-nav" type="button" title="打开导航" @click="navigate(selected.name, selected.address)">🧭 导航</button>
+          </div>
           <p class="sp-desc">{{ selected.desc }}</p>
           <button class="sp-btn" @click="toggleRelated">
             {{ showRelated ? '收起相关美食 ↑' : `查看相关美食（${relatedSpots.length} 家同分类） ↓` }}
@@ -312,7 +323,14 @@ onMounted(() => {
             <h3>{{ s.shopName }}</h3>
             <p class="sc-desc">{{ s.description || '这家店还没写简介～' }}</p>
             <div class="sc-meta">
-              <span v-if="s.district">📍 {{ s.district }}</span>
+              <button
+                v-if="s.district"
+                type="button"
+                class="sc-nav"
+                title="打开导航"
+                @click.stop="navigate(s.shopName, s.district)"
+              >📍 {{ s.district }} <em>导航 ›</em></button>
+              <span v-else-if="s.district">📍 {{ s.district }}</span>
               <span v-if="s.ownerName">👤 @{{ s.ownerName }}</span>
             </div>
             <div class="sc-foot">
@@ -383,6 +401,10 @@ onMounted(() => {
 .sp-rating small{ font-size:12px; color:var(--muted); font-weight:600; }
 .sp-row{ font-size:14px; color:#4a3d33; margin-bottom:8px; }
 .sp-row b{ display:inline-block; width:42px; color:var(--muted); font-weight:700; }
+.sp-address{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
+.sp-nav{ margin-left:auto; border:none; border-radius:999px; padding:4px 10px; font-size:12px; font-weight:700;
+  color:#fff; cursor:pointer; font-family:inherit; background:linear-gradient(120deg,#ff9a52,#ff5f3d); transition:.2s; }
+.sp-nav:hover{ transform:translateY(-1px); box-shadow:0 4px 10px rgba(255,95,61,.3); }
 .sp-desc{ font-size:13.5px; line-height:1.7; color:var(--muted); margin:10px 0 16px; }
 .sp-btn{ width:100%; border:0; border-radius:12px; padding:11px; font-weight:700; color:#fff; cursor:pointer;
   background:linear-gradient(120deg,var(--orange),var(--tomato)); box-shadow:0 8px 18px rgba(255,90,60,.3); transition:.2s; }
@@ -444,6 +466,10 @@ onMounted(() => {
 .sc-desc{ font-size:12.5px; color:var(--muted); line-height:1.5; min-height:38px;
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .sc-meta{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; font-size:12px; color:var(--muted); }
+.sc-nav{ border:none; background:#fff1e6; color:#d1552f; border-radius:999px; padding:3px 9px; font-size:12px;
+  cursor:pointer; font-family:inherit; transition:.2s; }
+.sc-nav:hover{ background:#ffe0cc; }
+.sc-nav em{ font-style:normal; font-weight:800; margin-left:3px; }
 .sc-foot{ display:flex; align-items:center; gap:14px; margin-top:12px; padding-top:10px;
   border-top:1px dashed #f0e6db; font-size:12.5px; color:var(--muted); }
 .sc-num{ font-weight:700; color:var(--ink); }

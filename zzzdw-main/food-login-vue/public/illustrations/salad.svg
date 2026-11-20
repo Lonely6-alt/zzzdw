@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eafaf0"/><stop offset="1" stop-color="#bcebd0"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg)"/>
+  <circle cx="58" cy="64" r="16" fill="#fff" opacity=".45"/>
+  <circle cx="348" cy="88" r="10" fill="#fff" opacity=".35"/>
+  <circle cx="332" cy="238" r="18" fill="#fff" opacity=".25"/>
+  <!-- 碗 -->
+  <path d="M65 138 Q72 258 200 258 Q328 258 335 138 Z" fill="#fffaf0" stroke="#6b4230" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M76 168 Q200 200 324 168" stroke="#d9e8dd" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <!-- 生菜 -->
+  <g fill="#6fc05a" stroke="#4f8f3e" stroke-width="4">
+    <path d="M92 138 q-6 -44 34 -50 q-4 34 18 48 q-26 12 -52 2Z"/>
+    <path d="M276 136 q6 -44 -34 -50 q4 34 -18 48 q26 12 52 2Z"/>
+    <path d="M150 128 q-24 -34 14 -48 q10 30 34 34 q-22 20 -48 14Z"/>
+    <path d="M244 126 q24 -34 -14 -48 q-10 30 -34 34 q22 20 48 14Z"/>
+  </g>
+  <!-- 番茄 -->
+  <circle cx="164" cy="146" r="22" fill="#e8503f" stroke="#6b4230" stroke-width="5"/>
+  <circle cx="164" cy="146" r="10" fill="#f58a7a"/>
+  <circle cx="238" cy="150" r="20" fill="#e8503f" stroke="#6b4230" stroke-width="5"/>
+  <circle cx="238" cy="150" r="9" fill="#f58a7a"/>
+  <!-- 牛油果 -->
+  <g transform="translate(200,120)">
+    <path d="M-26 0 q26 -34 52 0 q-26 26 -52 0Z" fill="#a8d45a" stroke="#6b4230" stroke-width="4"/>
+    <circle cx="0" cy="0" r="9" fill="#b5763c"/>
+  </g>
+  <!-- 玉米粒 -->
+  <g fill="#ffc933" stroke="#e0a800" stroke-width="2">
+    <circle cx="120" cy="160" r="6"/><circle cx="132" cy="170" r="6"/><circle cx="116" cy="174" r="6"/>
+    <circle cx="282" cy="158" r="6"/><circle cx="270" cy="170" r="6"/><circle cx="288" cy="172" r="6"/>
+  </g>
+  <!-- 叉子 -->
+  <g transform="translate(330,150) rotate(18)" stroke="#9aa7b0" stroke-width="6" fill="none" stroke-linecap="round">
+    <line x1="0" y1="0" x2="0" y2="90"/>
+    <line x1="-14" y1="0" x2="-14" y2="26"/>
+    <line x1="0" y1="0" x2="0" y2="26"/>
+    <line x1="14" y1="0" x2="14" y2="26"/>
+  </g>
+</svg>
