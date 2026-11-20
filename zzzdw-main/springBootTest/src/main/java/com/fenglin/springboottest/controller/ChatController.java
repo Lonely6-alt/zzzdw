@@ -17,6 +17,7 @@ import com.fenglin.springboottest.util.JwtUtil;
 import com.fenglin.springboottest.ws.ChatWsHandler;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -255,5 +256,44 @@ public class ChatController {
         event.put("msg", msgVo);
         ws.push(java.util.Arrays.asList(uid, pid), event);
         return msg;
+    }
+
+    /**
+     * 删除自己发送的消息：DELETE /api/chat/sessions/{sessionId}/messages/{msgId}
+     * 仅发送者可删；删除后重算会话摘要，并实时通知双方刷新消息列表。
+     */
+    @DeleteMapping("/sessions/{sessionId}/messages/{msgId}")
+    public Map<String, Object> deleteMessage(@PathVariable Long sessionId, @PathVariable Long msgId,
+                                             HttpServletRequest request) {
+        User me = currentUser(request);
+        ChatSession s = requireMember(sessionId, me.getId());
+        ChatMessage msg = messageMapper.selectById(msgId);
+        if (msg == null || !sessionId.equals(msg.getSessionId())) {
+            throw new BizException(404, "消息不存在");
+        }
+        if (!me.getId().equals(msg.getSenderId())) {
+            throw new BizException(403, "只能删除自己发送的消息");
+        }
+        messageMapper.deleteById(msgId);
+
+        // 会话摘要回退到剩余的最后一条消息，避免列表里留着已删除的内容
+        ChatMessage last = messageMapper.selectOne(new LambdaQueryWrapper<ChatMessage>()
+                .eq(ChatMessage::getSessionId, sessionId)
+                .orderByDesc(ChatMessage::getMsgId)
+                .last("LIMIT 1"));
+        s.setLastMsg(last == null ? "" : last.getContent());
+        s.setLastTime(last == null ? null : last.getSendTime());
+        sessionMapper.updateById(s);
+
+        Map<String, Object> event = new HashMap<>();
+        event.put("type", "private_deleted");
+        event.put("sessionId", sessionId);
+        event.put("msgId", msgId);
+        ws.push(java.util.Arrays.asList(s.getUserAId(), s.getUserBId()), event);
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("deleted", true);
+        res.put("msgId", msgId);
+        return res;
     }
 }

@@ -16,6 +16,7 @@ import com.fenglin.springboottest.ws.ChatWsHandler;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -325,5 +326,48 @@ public class ChatGroupController {
         event.put("msg", msgVo);
         ws.push(uids, event);
         return msg;
+    }
+
+    /** 删除自己发的群消息：DELETE /api/chat/groups/{id}/messages/{msgId} */
+    @DeleteMapping("/groups/{id}/messages/{msgId}")
+    @Transactional
+    public Map<String, Object> deleteMessage(@PathVariable Long id, @PathVariable Long msgId,
+                                             HttpServletRequest request) {
+        User me = currentUser(request);
+        requireMember(id, me.getId());
+        ChatGroupMessage msg = messageMapper.selectById(msgId);
+        if (msg == null || !id.equals(msg.getGroupId())) {
+            throw new BizException(404, "消息不存在");
+        }
+        if (!me.getId().equals(msg.getSenderId())) {
+            throw new BizException(403, "只能删除自己发送的消息");
+        }
+        messageMapper.deleteById(msgId);
+
+        // 群摘要回退到最后一条剩余消息
+        ChatGroup g = groupMapper.selectById(id);
+        if (g != null) {
+            ChatGroupMessage last = messageMapper.selectOne(new LambdaQueryWrapper<ChatGroupMessage>()
+                    .eq(ChatGroupMessage::getGroupId, id)
+                    .orderByDesc(ChatGroupMessage::getMsgId)
+                    .last("LIMIT 1"));
+            g.setLastMsg(last == null ? "" : last.getContent());
+            g.setLastTime(last == null ? null : last.getSendTime());
+            groupMapper.updateById(g);
+        }
+
+        List<ChatGroupMember> members = memberMapper.selectList(
+                new LambdaQueryWrapper<ChatGroupMember>().eq(ChatGroupMember::getGroupId, id));
+        List<Long> uids = members.stream().map(ChatGroupMember::getUserId).collect(Collectors.toList());
+        Map<String, Object> event = new HashMap<>();
+        event.put("type", "group_deleted");
+        event.put("groupId", id);
+        event.put("msgId", msgId);
+        ws.push(uids, event);
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("deleted", true);
+        res.put("msgId", msgId);
+        return res;
     }
 }
