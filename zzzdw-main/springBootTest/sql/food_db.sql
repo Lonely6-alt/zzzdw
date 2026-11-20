@@ -11,7 +11,7 @@
  Target Server Version : 80039 (8.0.39)
  File Encoding         : 65001
 
- Date: 18/11/2026 09:57:03
+ Date: 20/11/2026 16:40:30
 */
 
 SET NAMES utf8mb4;
@@ -71,7 +71,7 @@ CREATE TABLE `chat_group`  (
 -- ----------------------------
 INSERT INTO `chat_group` VALUES (1, '周末探店小分队', 5, '🍜', '每周六上午集合，专挑巷子里的老店', '2026-10-25 16:34:57', '周六老城区集合，群里新朋友也一起来～', '2026-11-09 11:00:31');
 INSERT INTO `chat_group` VALUES (2, '美食社区官方群', 4, '📣', '社区公告、活动预告与问题反馈都在这里', '2026-10-25 16:34:57', '收到，我这周有三家想推荐', '2026-11-06 11:44:57');
-INSERT INTO `chat_group` VALUES (3, '深夜食堂交流群', 8, '🌙', '十点以后才开聊，专供夜宵党', '2026-10-25 16:34:57', '那我一会儿过去，来二十串', '2026-11-06 15:06:57');
+INSERT INTO `chat_group` VALUES (3, '深夜食堂交流群', 8, '🌙', '十点以后才开聊，专供夜宵党', '2026-10-25 16:34:57', '🍻', '2026-11-20 15:55:27');
 
 -- ----------------------------
 -- Table structure for chat_group_member
@@ -100,7 +100,7 @@ INSERT INTO `chat_group_member` VALUES (5, 2, 4, 'owner', '2026-11-06 16:34:57',
 INSERT INTO `chat_group_member` VALUES (6, 2, 5, 'member', '2026-11-06 16:34:57', 7);
 INSERT INTO `chat_group_member` VALUES (7, 2, 8, 'member', '2026-11-06 16:34:57', 7);
 INSERT INTO `chat_group_member` VALUES (8, 2, 11, 'member', '2026-11-06 16:34:57', 7);
-INSERT INTO `chat_group_member` VALUES (9, 3, 8, 'owner', '2026-11-06 16:34:57', 10);
+INSERT INTO `chat_group_member` VALUES (9, 3, 8, 'owner', '2026-11-06 16:34:57', 17);
 INSERT INTO `chat_group_member` VALUES (10, 3, 5, 'member', '2026-11-06 16:34:57', 10);
 INSERT INTO `chat_group_member` VALUES (11, 3, 12, 'member', '2026-11-06 16:34:57', 10);
 
@@ -117,7 +117,7 @@ CREATE TABLE `chat_group_message`  (
   PRIMARY KEY (`msg_id`) USING BTREE,
   INDEX `idx_group_time`(`group_id` ASC, `send_time` ASC) USING BTREE,
   INDEX `idx_group_sender`(`sender_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 17 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '群聊消息表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 18 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '群聊消息表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of chat_group_message
@@ -134,6 +134,7 @@ INSERT INTO `chat_group_message` VALUES (9, 3, 12, '我们家到凌晨两点，�
 INSERT INTO `chat_group_message` VALUES (10, 3, 5, '那我一会儿过去，来二十串', '2026-11-06 15:06:57');
 INSERT INTO `chat_group_message` VALUES (15, 1, 8, '我们去吃什么', '2026-11-06 16:48:56');
 INSERT INTO `chat_group_message` VALUES (16, 1, 5, '周六老城区集合，群里新朋友也一起来～', '2026-11-09 11:00:31');
+INSERT INTO `chat_group_message` VALUES (17, 3, 8, '🍻', '2026-11-20 15:55:27');
 
 -- ----------------------------
 -- Table structure for chat_message
@@ -154,14 +155,15 @@ CREATE TABLE `chat_message`  (
   CONSTRAINT `fk_cm_receiver` FOREIGN KEY (`receiver_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_cm_sender` FOREIGN KEY (`sender_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_cm_session` FOREIGN KEY (`session_id`) REFERENCES `chat_session` (`session_id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '私信消息表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '私信消息表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of chat_message
 -- ----------------------------
 INSERT INTO `chat_message` VALUES (1, 1, 8, 5, 'Hilo', '2026-11-04 09:50:03', 0);
-INSERT INTO `chat_message` VALUES (5, 4, 8, 57, '[IMG]/api/chat/images/202611/43dcaf9490ee410c90cf2e0e33f53bf7.png[/IMG]', '2026-11-18 08:57:30', 0);
+INSERT INTO `chat_message` VALUES (5, 4, 8, 57, '[IMG]/api/chat/images/202611/43dcaf9490ee410c90cf2e0e33f53bf7.png[/IMG]', '2026-11-18 08:57:30', 1);
 INSERT INTO `chat_message` VALUES (6, 2, 8, 4, '😋', '2026-11-18 09:02:59', 1);
+INSERT INTO `chat_message` VALUES (7, 4, 57, 8, '🍣', '2026-11-20 16:26:26', 1);
 
 -- ----------------------------
 -- Table structure for chat_session
@@ -187,7 +189,7 @@ CREATE TABLE `chat_session`  (
 INSERT INTO `chat_session` VALUES (1, 5, 8, '2026-11-04 09:49:54', 'Hilo', '2026-11-04 09:50:03');
 INSERT INTO `chat_session` VALUES (2, 4, 8, '2026-11-04 09:50:10', '😋', '2026-11-18 09:02:59');
 INSERT INTO `chat_session` VALUES (3, 4, 5, '2026-11-04 09:50:39', NULL, '2026-11-06 16:46:37');
-INSERT INTO `chat_session` VALUES (4, 8, 57, '2026-11-16 11:41:58', '[IMG]/api/chat/images/202611/43dcaf9490ee410c90cf2e0e33f53bf7.png[/IMG]', '2026-11-18 08:57:30');
+INSERT INTO `chat_session` VALUES (4, 8, 57, '2026-11-16 11:41:58', '🍣', '2026-11-20 16:26:26');
 INSERT INTO `chat_session` VALUES (6, 4, 10, '2026-11-18 09:52:47', NULL, NULL);
 
 -- ----------------------------
@@ -507,7 +509,7 @@ CREATE TABLE `post_like`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_user_post`(`user_id` ASC, `post_id` ASC) USING BTREE,
   INDEX `idx_post`(`post_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '绗旇?鐐硅禐琛' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '绗旇?鐐硅禐琛' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of post_like
@@ -557,7 +559,7 @@ CREATE TABLE `shop`  (
   PRIMARY KEY (`shop_id`) USING BTREE,
   UNIQUE INDEX `uk_shop_owner`(`owner_id` ASC) USING BTREE,
   UNIQUE INDEX `uk_shop_name`(`shop_name` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 50 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '店铺信息表（店家可自定义店铺名称）' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 51 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '店铺信息表（店家可自定义店铺名称）' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of shop
@@ -611,6 +613,7 @@ INSERT INTO `shop` VALUES (46, 54, '拉花实验室', '🥛', '拉花好看，�
 INSERT INTO `shop` VALUES (47, 55, '老房子咖啡馆', '🏠', '院子里的老房子，安静', '五道口', '400-1047-047', 'active', '2026-11-06 16:34:57', '2026-11-09 11:20:15', '09:00', '21:30');
 INSERT INTO `shop` VALUES (48, 56, '冷萃事务所', '🧊', '冷萃和白日梦，冰滴现出', '万象城', '400-1048-048', 'active', '2026-11-06 16:34:57', '2026-11-09 11:25:10', '09:00', '21:30');
 INSERT INTO `shop` VALUES (49, 8, '哈哈面馆', '🍜', '非常好吃', '', '1243213455', 'active', '2026-11-18 09:43:37', '2026-11-18 09:43:37', '09:00', '21:30');
+INSERT INTO `shop` VALUES (50, 57, 'w的店', '🏠', '', '万象城', '', 'active', '2026-11-20 16:26:50', '2026-11-20 16:26:50', '09:00', '21:30');
 
 -- ----------------------------
 -- Table structure for tag
@@ -650,7 +653,7 @@ CREATE TABLE `user`  (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_username`(`username` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 58 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 60 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of user
@@ -707,5 +710,7 @@ INSERT INTO `user` VALUES (54, 'shop46', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpm
 INSERT INTO `user` VALUES (55, 'shop47', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
 INSERT INTO `user` VALUES (56, 'shop48', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
 INSERT INTO `user` VALUES (57, 'wwww', '$2a$10$QQQR7euJBQowk45F9QoIPerg3IqwSdmRcCfK6HbodvUgZl.1mnpRK', 'user', 1, 'active', '2026-11-16 10:55:19');
+INSERT INTO `user` VALUES (58, 'zzz', '11111111', 'user', 1, 'active', '2026-11-20 16:23:51');
+INSERT INTO `user` VALUES (59, 'wergc', '12345678', 'user', 1, 'active', '2026-11-20 16:37:54');
 
 SET FOREIGN_KEY_CHECKS = 1;
