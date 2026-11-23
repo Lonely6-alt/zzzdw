@@ -3,13 +3,15 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { authUser } from '../composables/useAuth.js'
 import { useFavorites } from '../composables/useFavorites.js'
+import { useGrowth, LEVELS, WEEKLY_TASKS, COUPON_SHOP, BADGES } from '../composables/useGrowth.js'
 
 const router = useRouter()
 const posts = ref([])
 const loading = ref(false)
-const tab = ref('mine') // 'mine' | 'fav'
+const tab = ref('mine') // 'mine' | 'fav' | 'badge'
 
 const { ids } = useFavorites()
+const growth = useGrowth()
 
 const mine = computed(() =>
   posts.value.filter(p => p.author === authUser.value)
@@ -35,6 +37,28 @@ function goHome() {
   else router.push('/')
 }
 
+/* ---------------- 徽章墙 ---------------- */
+const badgeGroups = computed(() => {
+  const g = {}
+  for (const b of BADGES) {
+    (g[b.group] = g[b.group] || []).push(b)
+  }
+  return g
+})
+const unlockedCount = computed(() =>
+  BADGES.filter(b => growth.unlocked.value[b.id]).length
+)
+function badgeUnlocked(id) { return !!growth.unlocked.value[id] }
+function fmtUnlockTime(ts) {
+  const d = new Date(ts)
+  return `${d.getMonth() + 1}月${d.getDate()}日解锁`
+}
+
+/* ---------------- 成长体系 ---------------- */
+const couponList = computed(() => Object.entries(growth.coupons.value).map(([k, c]) => ({ ...c, key: k })).reverse())
+const showCouponShop = ref(false)
+function pct(cur, target) { return Math.min(100, Math.round((cur / target) * 100)) }
+
 onMounted(load)
 </script>
 
@@ -54,22 +78,136 @@ onMounted(load)
       <div class="avatar">🧑‍🍳</div>
       <div class="who">
         <h1>{{ authUser }}</h1>
-        <p>美食社区 · 私藏地图管理员</p>
+        <p>
+          <span class="lv-pill">{{ growth.level.value.emoji }} Lv.{{ growth.level.value.lv }} {{ growth.level.value.name }}</span>
+          美食社区 · 吃货
+        </p>
       </div>
       <div class="stats">
         <div class="stat"><b>{{ mine.length }}</b><span>我的发布</span></div>
         <div class="stat"><b>{{ favList.length }}</b><span>我的收藏</span></div>
+        <div class="stat"><b>{{ growth.points.value }}</b><span>吃货积分</span></div>
       </div>
       <button class="shop-entry" @click="router.push('/shop')">🏠 我的店铺</button>
+    </section>
+
+    <!-- ===== 吃货成长中心 ===== -->
+    <section class="growth">
+      <!-- 积分等级卡 -->
+      <div class="g-card level-card">
+        <div class="g-head">
+          <h3>{{ growth.level.value.emoji }} Lv.{{ growth.level.value.lv }} {{ growth.level.value.name }}</h3>
+          <span class="g-points">{{ growth.points.value }} 积分</span>
+        </div>
+        <div class="lv-bar">
+          <div class="lv-fill" :style="{ width: (growth.levelProgress.value * 100) + '%' }"></div>
+        </div>
+        <p class="lv-next">
+          <template v-if="growth.nextLevel.value">
+            距离下一级「{{ growth.nextLevel.value.emoji }} {{ growth.nextLevel.value.name }}」还差 {{ growth.nextLevel.value.min - growth.points.value }} 积分
+          </template>
+          <template v-else>已是最高等级，站在吃货之巅 👑</template>
+        </p>
+        <div class="lv-all">
+          <span
+            v-for="l in LEVELS"
+            :key="l.lv"
+            class="lv-node"
+            :class="{ on: growth.points.value >= l.min }"
+          >{{ l.emoji }} Lv.{{ l.lv }} {{ l.name }}</span>
+        </div>
+      </div>
+
+      <!-- 每周任务 -->
+      <div class="g-card">
+        <div class="g-head">
+          <h3>📅 每周任务</h3>
+          <span class="g-sub">每周一凌晨重置，做完就领积分</span>
+        </div>
+        <ul class="task-list">
+          <li v-for="t in WEEKLY_TASKS" :key="t.key" class="task" :class="{ done: growth.taskDone(t.key) }">
+            <span class="t-emoji">{{ t.emoji }}</span>
+            <div class="t-main">
+              <p class="t-title">{{ t.title }}</p>
+              <div class="t-bar">
+                <div class="t-fill" :style="{ width: pct(growth.taskProgress(t.key), t.target) + '%' }"></div>
+              </div>
+              <span class="t-count">{{ Math.min(growth.taskProgress(t.key), t.target) }} / {{ t.target }}</span>
+            </div>
+            <button
+              class="t-claim"
+              type="button"
+              :disabled="!growth.taskDone(t.key) || growth.taskClaimed(t.key)"
+              :class="{ claimed: growth.taskClaimed(t.key) }"
+              @click="growth.claimTask(t.key)"
+            >
+              {{ growth.taskClaimed(t.key) ? '已领取' : (growth.taskDone(t.key) ? `领 ${t.points} 分` : `+${t.points}`) }}
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <!-- 积分兑换优惠券 -->
+      <div class="g-card">
+        <div class="g-head">
+          <h3>🎟️ 积分商城</h3>
+          <button class="mini-btn" type="button" @click="showCouponShop = !showCouponShop">
+            {{ showCouponShop ? '收起' : '去兑换' }}
+          </button>
+        </div>
+        <p class="g-sub">已拥有 {{ growth.couponCount.value }} 张优惠券</p>
+        <div v-if="showCouponShop" class="coupon-shop">
+          <div v-for="c in COUPON_SHOP" :key="c.id" class="coupon" :class="{ lack: growth.points.value < c.cost }">
+            <span class="c-emoji">{{ c.emoji }}</span>
+            <div class="c-info">
+              <b>{{ c.name }}</b>
+              <i>积分足够即可兑换，兑换码下方可见</i>
+            </div>
+            <button class="c-buy" type="button" :disabled="growth.points.value < c.cost" @click="growth.exchange(c.id)">
+              {{ c.cost }} 分兑换
+            </button>
+          </div>
+        </div>
+        <div v-if="couponList.length" class="my-coupons">
+          <span v-for="c in couponList" :key="c.key" class="my-coupon">
+            🎫 {{ c.name }} · 码 {{ c.code }}
+          </span>
+        </div>
+      </div>
     </section>
 
     <!-- 分段切换 -->
     <nav class="tabs">
       <button :class="{ on: tab === 'mine' }" @click="tab = 'mine'">我的发布</button>
       <button :class="{ on: tab === 'fav' }" @click="tab = 'fav'">我的收藏</button>
+      <button :class="{ on: tab === 'badge' }" @click="tab = 'badge'">
+        🎖️ 吃货徽章（{{ unlockedCount }}/{{ BADGES.length }}）
+      </button>
     </nav>
 
     <p v-if="loading" class="loader-wrap"><span class="spinner"></span></p>
+
+    <!-- 徽章墙 -->
+    <section v-else-if="tab === 'badge'" class="badge-wall">
+      <div v-for="(list, gName) in badgeGroups" :key="gName" class="badge-group">
+        <h3 class="bg-title">{{ gName }}</h3>
+        <div class="badge-grid">
+          <div
+            v-for="b in list"
+            :key="b.id"
+            class="badge"
+            :class="{ on: badgeUnlocked(b.id) }"
+          >
+            <span class="b-emoji">{{ badgeUnlocked(b.id) ? b.emoji : '🔒' }}</span>
+            <b class="b-name">{{ b.name }}</b>
+            <span class="b-desc">{{ b.desc }}</span>
+            <span v-if="badgeUnlocked(b.id)" class="b-time">{{ fmtUnlockTime(growth.unlocked.value[b.id]) }}</span>
+            <span v-else class="b-time locked">未解锁</span>
+          </div>
+        </div>
+      </div>
+      <p class="badge-tip">发布笔记、写评价、尝试新口味都能点亮徽章哦～</p>
+    </section>
 
     <div v-else-if="tab === 'mine'" class="grid">
       <article v-for="p in mine" :key="p.id" class="card" @click="openPost(p.id)">
@@ -127,7 +265,9 @@ onMounted(load)
   display:flex; align-items:center; justify-content:center; font-size:34px; }
 .who{ position:relative; z-index:2; flex:1; min-width:140px; }
 .who h1{ font-size:22px; font-weight:800; }
-.who p{ margin-top:4px; font-size:13px; opacity:.9; }
+.who p{ margin-top:4px; font-size:13px; opacity:.9; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.lv-pill{ background:rgba(255,255,255,.92); color:var(--tomato); font-weight:800; font-size:12px;
+  padding:3px 10px; border-radius:999px; }
 .stats{ position:relative; z-index:2; display:flex; gap:22px; }
 .stat{ text-align:center; }
 .stat b{ display:block; font-size:22px; font-weight:800; }
@@ -137,12 +277,83 @@ onMounted(load)
   font-family:inherit; transition:.2s; white-space:nowrap; }
 .shop-entry:hover{ background:#fff; color:var(--tomato); }
 
-/* 分段切换 */
-.tabs{ position:relative; z-index:2; display:flex; gap:8px; margin:22px 0 18px; }
+/* ===== 成长中心 ===== */
+.growth{ position:relative; z-index:2; display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:18px; }
+.g-card{ background:#fff; border-radius:18px; padding:16px 18px; border:1px solid #f6ede2;
+  box-shadow:0 8px 20px rgba(255,90,60,.07); }
+.level-card{ grid-column:1 / -1; background:linear-gradient(130deg,#fff7f0,#fff0e6); }
+.g-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.g-head h3{ margin:0; font-size:15.5px; font-weight:800; }
+.g-points{ font-size:13px; font-weight:800; color:var(--tomato); }
+.g-sub{ font-size:11.5px; color:var(--muted); }
+.lv-bar{ height:10px; background:#f4e8dc; border-radius:999px; overflow:hidden; }
+.lv-fill{ height:100%; border-radius:999px; background:linear-gradient(90deg,var(--orange),var(--tomato));
+  transition:width .5s ease; }
+.lv-next{ margin:8px 0 10px; font-size:12px; color:#9b8c7e; }
+.lv-all{ display:flex; flex-wrap:wrap; gap:7px; }
+.lv-node{ font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px; background:#f4e8dc; color:#a98f78; }
+.lv-node.on{ background:linear-gradient(120deg,var(--orange),var(--tomato)); color:#fff; box-shadow:0 4px 10px rgba(255,90,60,.25); }
+
+.task-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+.task{ display:flex; align-items:center; gap:10px; }
+.t-emoji{ font-size:20px; flex-shrink:0; }
+.t-main{ flex:1; min-width:0; }
+.t-title{ margin:0; font-size:12.5px; font-weight:700; color:var(--ink); }
+.t-bar{ height:6px; background:#f4e8dc; border-radius:999px; margin-top:5px; overflow:hidden; }
+.t-fill{ height:100%; background:linear-gradient(90deg,#ffaf5e,var(--tomato)); border-radius:999px; transition:width .3s; }
+.task.done .t-fill{ background:linear-gradient(90deg,#43c07a,#2f9a5d); }
+.t-count{ font-size:10.5px; color:var(--muted); display:block; margin-top:3px; }
+.t-claim{ flex-shrink:0; border:0; border-radius:999px; padding:6px 12px; font-size:11.5px; font-weight:800;
+  cursor:pointer; color:#fff; background:linear-gradient(120deg,var(--orange),var(--tomato)); font-family:inherit; transition:.2s; }
+.t-claim:disabled{ opacity:.45; cursor:not-allowed; }
+.t-claim.claimed{ background:#e7f6ec; color:#1d7a3e; opacity:1; }
+.task.done .t-claim:not(.claimed):not(:disabled){ animation:pulse 1.2s infinite; }
+@keyframes pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,90,60,.35); } 50%{ box-shadow:0 0 0 6px rgba(255,90,60,0); } }
+
+.mini-btn{ border:1.5px solid #ffd9bf; background:#fff3e9; color:var(--tomato); font-size:12px; font-weight:800;
+  padding:4px 12px; border-radius:999px; cursor:pointer; font-family:inherit; }
+.mini-btn:hover{ background:#ffe9d8; }
+.coupon-shop{ display:flex; flex-direction:column; gap:9px; margin-top:10px; }
+.coupon{ display:flex; align-items:center; gap:10px; border:1.5px dashed #ffd9b0; background:#fffaf5;
+  border-radius:13px; padding:9px 12px; }
+.coupon.lack{ opacity:.55; }
+.c-emoji{ font-size:22px; }
+.c-info{ flex:1; min-width:0; }
+.c-info b{ display:block; font-size:12.5px; color:var(--ink); }
+.c-info i{ font-style:normal; font-size:10.5px; color:var(--muted); }
+.c-buy{ flex-shrink:0; border:0; border-radius:999px; padding:6px 12px; font-size:11.5px; font-weight:800;
+  color:#fff; background:linear-gradient(120deg,var(--orange),var(--tomato)); cursor:pointer; font-family:inherit; }
+.c-buy:disabled{ opacity:.5; cursor:not-allowed; }
+.my-coupons{ display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; }
+.my-coupon{ font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px; background:#e9f7ee; color:#1d7a3e; }
+
+/* ===== 分段切换 ===== */
+.tabs{ position:relative; z-index:2; display:flex; gap:8px; margin:22px 0 18px; flex-wrap:wrap; }
 .tabs button{ border:1.5px solid #ecdfd2; background:#fff; color:var(--muted);
   padding:9px 20px; border-radius:20px; font-size:14px; font-weight:600; cursor:pointer; transition:.2s; }
 .tabs button:hover{ border-color:var(--orange); color:var(--orange); }
 .tabs button.on{ background:linear-gradient(120deg,var(--orange),var(--tomato)); border-color:transparent; color:#fff; }
+
+/* ===== 徽章墙 ===== */
+.badge-wall{ position:relative; z-index:2; display:flex; flex-direction:column; gap:18px; }
+.badge-group h3{ margin:0 0 10px; font-size:15px; font-weight:800; }
+.badge-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+.badge{ background:#faf5ef; border:1.5px solid #f0e6db; border-radius:16px; padding:14px 12px;
+  text-align:center; transition:.2s; position:relative; overflow:hidden; }
+.badge.on{ background:linear-gradient(150deg,#fff6e9,#fff0e0); border-color:#ffd9b0;
+  box-shadow:0 8px 18px rgba(255,150,60,.14); }
+.badge.on::after{ content:"✦ 已点亮"; position:absolute; top:8px; right:-26px; transform:rotate(38deg);
+  font-size:9px; font-weight:800; color:#fff; background:linear-gradient(120deg,var(--orange),var(--tomato));
+  padding:2px 30px; letter-spacing:1px; }
+.b-emoji{ font-size:30px; display:block; filter:grayscale(1); opacity:.45; }
+.badge.on .b-emoji{ filter:none; opacity:1; animation:badgeIn .4s ease; }
+@keyframes badgeIn{ from{ transform:scale(.5); opacity:0; } to{ transform:scale(1); opacity:1; } }
+.b-name{ display:block; font-size:12.5px; font-weight:800; margin-top:7px; color:var(--muted); }
+.badge.on .b-name{ color:var(--tomato); }
+.b-desc{ display:block; font-size:10.5px; color:#a09183; margin-top:4px; line-height:1.4; }
+.b-time{ display:block; font-size:10px; margin-top:6px; color:#c8a25c; font-weight:700; }
+.b-time.locked{ color:#c4ab94; }
+.badge-tip{ text-align:center; font-size:12px; color:var(--muted); margin:4px 0 0; }
 
 .hint{ position:relative; z-index:2; color:var(--muted); padding:30px 0; text-align:center; font-size:14px; }
 
@@ -160,6 +371,6 @@ onMounted(load)
 .excerpt{ font-size:13px; color:var(--muted); line-height:1.5;
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 
-@media (max-width:760px){ .grid{ grid-template-columns:repeat(2,1fr); } }
-@media (max-width:480px){ .grid{ grid-template-columns:1fr; } .stats{ width:100%; justify-content:flex-start; } }
+@media (max-width:760px){ .grid,.badge-grid{ grid-template-columns:repeat(2,1fr); } .growth{ grid-template-columns:1fr; } }
+@media (max-width:480px){ .grid,.badge-grid{ grid-template-columns:1fr; } .stats{ width:100%; justify-content:flex-start; } }
 </style>

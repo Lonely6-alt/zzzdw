@@ -328,6 +328,60 @@ public class ChatGroupController {
         return msg;
     }
 
+    /**
+     * 撤回自己发的群消息：POST /api/chat/groups/{id}/messages/{msgId}/recall
+     * 仅发送者可撤回，限发送后 2 分钟内；软删除，内容标记为 [RECALLED]。
+     */
+    @PostMapping("/groups/{id}/messages/{msgId}/recall")
+    @Transactional
+    public Map<String, Object> recallMessage(@PathVariable Long id, @PathVariable Long msgId,
+                                             HttpServletRequest request) {
+        User me = currentUser(request);
+        requireMember(id, me.getId());
+        ChatGroupMessage msg = messageMapper.selectById(msgId);
+        if (msg == null || !id.equals(msg.getGroupId())) {
+            throw new BizException(404, "消息不存在");
+        }
+        if (!me.getId().equals(msg.getSenderId())) {
+            throw new BizException(403, "只能撤回自己发送的消息");
+        }
+        if (msg.getSendTime() != null
+                && msg.getSendTime().isBefore(LocalDateTime.now().minusMinutes(2))) {
+            throw new BizException(400, "超过 2 分钟的消息不能撤回");
+        }
+        ChatGroupMessage recalled = new ChatGroupMessage();
+        recalled.setMsgId(msgId);
+        recalled.setContent("[RECALLED]");
+        messageMapper.updateById(recalled);
+
+        // 群摘要同步为撤回提示
+        ChatGroup g = groupMapper.selectById(id);
+        if (g != null) {
+            ChatGroupMessage last = messageMapper.selectOne(new LambdaQueryWrapper<ChatGroupMessage>()
+                    .eq(ChatGroupMessage::getGroupId, id)
+                    .orderByDesc(ChatGroupMessage::getMsgId)
+                    .last("LIMIT 1"));
+            g.setLastMsg(last == null ? "" : last.getContent());
+            g.setLastTime(last == null ? null : last.getSendTime());
+            groupMapper.updateById(g);
+        }
+
+        List<ChatGroupMember> members = memberMapper.selectList(
+                new LambdaQueryWrapper<ChatGroupMember>().eq(ChatGroupMember::getGroupId, id));
+        List<Long> uids = members.stream().map(ChatGroupMember::getUserId).collect(Collectors.toList());
+        Map<String, Object> event = new HashMap<>();
+        event.put("type", "group_recalled");
+        event.put("groupId", id);
+        event.put("msgId", msgId);
+        event.put("senderName", me.getUsername());
+        ws.push(uids, event);
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("recalled", true);
+        res.put("msgId", msgId);
+        return res;
+    }
+
     /** 删除自己发的群消息：DELETE /api/chat/groups/{id}/messages/{msgId} */
     @DeleteMapping("/groups/{id}/messages/{msgId}")
     @Transactional

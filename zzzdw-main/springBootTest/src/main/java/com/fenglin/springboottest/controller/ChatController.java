@@ -259,6 +259,54 @@ public class ChatController {
     }
 
     /**
+     * 撤回自己发送的消息：POST /api/chat/sessions/{sessionId}/messages/{msgId}/recall
+     * 仅发送者可撤回，且限发送后 2 分钟内；撤回为软删除，内容标记为 [RECALLED]，
+     * 双方都会看到「消息已撤回」提示，并实时通知双方刷新。
+     */
+    @PostMapping("/sessions/{sessionId}/messages/{msgId}/recall")
+    public Map<String, Object> recallMessage(@PathVariable Long sessionId, @PathVariable Long msgId,
+                                             HttpServletRequest request) {
+        User me = currentUser(request);
+        ChatSession s = requireMember(sessionId, me.getId());
+        ChatMessage msg = messageMapper.selectById(msgId);
+        if (msg == null || !sessionId.equals(msg.getSessionId())) {
+            throw new BizException(404, "消息不存在");
+        }
+        if (!me.getId().equals(msg.getSenderId())) {
+            throw new BizException(403, "只能撤回自己发送的消息");
+        }
+        if (msg.getSendTime() != null
+                && msg.getSendTime().isBefore(LocalDateTime.now().minusMinutes(2))) {
+            throw new BizException(400, "超过 2 分钟的消息不能撤回");
+        }
+        ChatMessage recalled = new ChatMessage();
+        recalled.setMsgId(msgId);
+        recalled.setContent("[RECALLED]");
+        messageMapper.updateById(recalled);
+
+        // 会话摘要同步为撤回提示
+        ChatMessage last = messageMapper.selectOne(new LambdaQueryWrapper<ChatMessage>()
+                .eq(ChatMessage::getSessionId, sessionId)
+                .orderByDesc(ChatMessage::getMsgId)
+                .last("LIMIT 1"));
+        s.setLastMsg(last == null ? "" : last.getContent());
+        s.setLastTime(last == null ? null : last.getSendTime());
+        sessionMapper.updateById(s);
+
+        Map<String, Object> event = new HashMap<>();
+        event.put("type", "private_recalled");
+        event.put("sessionId", sessionId);
+        event.put("msgId", msgId);
+        event.put("senderName", me.getUsername());
+        ws.push(java.util.Arrays.asList(s.getUserAId(), s.getUserBId()), event);
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("recalled", true);
+        res.put("msgId", msgId);
+        return res;
+    }
+
+    /**
      * 删除自己发送的消息：DELETE /api/chat/sessions/{sessionId}/messages/{msgId}
      * 仅发送者可删；删除后重算会话摘要，并实时通知双方刷新消息列表。
      */

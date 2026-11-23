@@ -3,7 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getToken } from '../composables/useAuth.js'
 import { useToast } from '../composables/useToast.js'
-import { catPhoto, catBg, catIcon } from '../data/categories.js'
+import { catBg } from '../data/categories.js'
+import ImgCarousel from '../components/ImgCarousel.vue'
 
 const router = useRouter()
 const { toast } = useToast()
@@ -17,24 +18,6 @@ const opened = ref(false)
 const shop = ref(null)
 const posts = ref([])
 const editing = ref(false)
-const brokenPosts = ref(new Set())
-const brokenCats = ref(new Set())
-
-// 菜品封面：自己的图 → 分类实拍图 → 渐变+emoji
-function coverOf(p) {
-  const id = Number(p.id)
-  if (p.imageUrl && !brokenPosts.value.has(id)) return p.imageUrl
-  const photo = catPhoto(p.category)
-  return photo && !brokenCats.value.has(p.category) ? photo : ''
-}
-function onCoverError(p) {
-  const id = Number(p.id)
-  if (p.imageUrl && !brokenPosts.value.has(id)) {
-    const s = new Set(brokenPosts.value); s.add(id); brokenPosts.value = s
-  } else {
-    const s = new Set(brokenCats.value); s.add(p.category); brokenCats.value = s
-  }
-}
 
 // 开店 / 改资料表单
 const form = ref({
@@ -48,6 +31,22 @@ const DISTRICTS = ['老城区', '科技园', '五道口', '万象城', '大学�
 
 const approvedCount = computed(() => posts.value.filter(p => p.status === 'approved').length)
 const pendingCount = computed(() => posts.value.filter(p => p.status === 'pending').length)
+
+// 店铺实时营业状态：休息中 / 未开始 / 即将打烊 / 营业中
+const shopOpen = computed(() => {
+  if (!shop.value) return null
+  if (shop.value.status === 'closed') return { key: 'closed', label: '休息中', cls: 'off' }
+  const ot = shop.value.openTime, ct = shop.value.closeTime
+  if (!ot || !ct) return { key: 'open', label: '营业中', cls: 'on' }
+  const [oh, om] = ot.split(':').map(Number)
+  const [ch, cm] = ct.split(':').map(Number)
+  const t = new Date().getHours() * 60 + new Date().getMinutes()
+  const o = oh * 60 + om, c = ch * 60 + cm
+  if (t < o) return { key: 'soon', label: '未开始', cls: 'off' }
+  if (t >= c) return { key: 'closed', label: '已打烊', cls: 'off' }
+  if (c - t <= 60) return { key: 'closing', label: '即将打烊', cls: 'warn' }
+  return { key: 'open', label: '营业中', cls: 'on' }
+})
 
 function authHeaders(extra = {}) {
   return { ...extra, Authorization: `Bearer ${getToken()}` }
@@ -190,12 +189,12 @@ onMounted(load)
         <section class="hero">
           <div class="s-emoji">{{ shop.emoji || '🏠' }}</div>
           <div class="s-who">
-            <div class="title-row">
-              <h1>{{ shop.shopName }}</h1>
-              <span class="pill" :class="shop.status === 'active' ? 'on' : 'off'">
-                {{ shop.status === 'active' ? '营业中' : '休息中' }}
-              </span>
-            </div>
+          <div class="title-row">
+            <h1>{{ shop.shopName }}</h1>
+            <span v-if="shopOpen" class="pill" :class="shopOpen.cls">
+              <i class="pill-dot"></i>{{ shopOpen.label }}
+            </span>
+          </div>
             <p class="desc">{{ shop.description || '这家店还没有写简介，点右上角编辑补充一下吧～' }}</p>
             <div class="meta">
               <span v-if="shop.district">📍 {{ shop.district }}</span>
@@ -230,8 +229,8 @@ onMounted(load)
         <div v-if="posts.length" class="grid">
           <article v-for="p in posts" :key="p.id" class="card" @click="openPost(p.id)">
             <div class="c-cover" :style="{ background: catBg(p.category) }">
-              <img v-if="coverOf(p)" :src="coverOf(p)" :alt="p.title" loading="lazy" @error="onCoverError(p)" />
-              <div v-else class="c-fallback"><span class="c-glow"></span><span class="c-emoji">{{ p.emoji || catIcon(p.category) }}</span></div>
+              <!-- 多图轮播：懒加载 + 骨架屏 + 实拍图浅水印 -->
+              <ImgCarousel :post="p" />
             </div>
             <div class="c-body">
               <div class="c-top">
@@ -364,6 +363,8 @@ onMounted(load)
 .pill{ font-size:11.5px; font-weight:800; padding:3px 10px; border-radius:999px; }
 .pill.on{ background:rgba(255,255,255,.9); color:var(--ok); }
 .pill.off{ background:rgba(0,0,0,.22); color:#fff; }
+.pill.warn{ background:rgba(255,255,255,.9); color:#b07010; }
+.pill-dot{ width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:5px; background:currentColor; }
 .desc{ margin-top:7px; font-size:13.5px; line-height:1.6; opacity:.94; }
 .meta{ display:flex; flex-wrap:wrap; gap:14px; margin-top:10px; font-size:12.5px; opacity:.9; }
 

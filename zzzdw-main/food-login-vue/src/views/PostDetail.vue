@@ -7,10 +7,14 @@ import { useReviews } from '../composables/useReviews.js'
 import { useToast } from '../composables/useToast.js'
 import { authUser, getToken } from '../composables/useAuth.js'
 import { catPhoto } from '../data/categories.js'
+import { useFoodMeta } from '../composables/useFoodMeta.js'
+import { useGrowth } from '../composables/useGrowth.js'
 
 const route = useRoute()
 const router = useRouter()
 const { toast } = useToast()
+const { noteTypeOf, calorieOf, dietTagsOf, serveOf, avgPriceOf, hoursOf, openStatusOf } = useFoodMeta()
+const growth = useGrowth()
 
 // 返回上一个页面；直接打开详情链接没有历史时才回首页
 function goBack() {
@@ -36,6 +40,14 @@ const submitting = ref(false)
 const reviewsList = computed(() => (post.value ? getReviews(post.value.id) : []))
 const avg = computed(() => (post.value ? displayRating(post.value) : 0))
 const likeCount = computed(() => (post.value ? countOf(post.value.id, post.value.likeCount || 0) : 0))
+// 卡片元数据：类型 / 热量 / 忌口 / 堂食打包 / 人均 / 营业时间
+const noteType = computed(() => (post.value ? noteTypeOf(post.value) : 'plant'))
+const cal = computed(() => (post.value ? calorieOf(post.value) : null))
+const dietTags = computed(() => (post.value ? dietTagsOf(post.value) : []))
+const serve = computed(() => (post.value ? serveOf(post.value) : ''))
+const price = computed(() => (post.value ? avgPriceOf(post.value) : 0))
+const hours = computed(() => (post.value ? hoursOf(post.value) : ['', '']))
+const openSt = computed(() => (post.value ? openStatusOf(post.value) : null))
 const coverImg = computed(() => {
   if (!post.value) return ''
   if (post.value.imageUrl && !brokenImg.value) return post.value.imageUrl
@@ -90,6 +102,8 @@ async function submitReview() {
       comment: myComment.value.trim()
     })
     post.value.reviewCount = (post.value.reviewCount || 0) + 1
+    // 成长体系：评价 +10 积分、打卡徽章进度、口味挑战（记录尝试的分类）
+    growth.onAction('comment', { category: post.value.category })
     myComment.value = ''
     myRating.value = 5
     reviewMsg.value = ''
@@ -146,11 +160,24 @@ function starStr(n) {
       </div>
 
       <h1>{{ post.title }}</h1>
+      <!-- 笔记类型横幅：避雷笔记醒目提示 -->
+      <div v-if="noteType === 'avoid'" class="type-banner avoid">⚠️ 这是一篇避雷笔记，真实踩雷反馈，供你下单前参考</div>
+      <div v-else class="type-banner plant">🌱 这是一篇种草笔记，作者真心推荐</div>
       <div class="meta">
         <span v-if="post.shopName" class="shop-chip">🏠 {{ post.shopName }}</span>
         <span class="author" @click="goProfile">@{{ post.author }}</span>
         · {{ new Date(post.createdAt).toLocaleDateString() }}
         <button class="dm-btn" type="button" @click="chatMerchant">💬 私信商家</button>
+      </div>
+      <!-- 菜品信息标签：热量 / 堂食打包 / 忌口 / 人均 / 营业时间 -->
+      <div class="info-chips">
+        <span class="chip" :class="cal.cls">🔥 热量 {{ cal.text }}</span>
+        <span class="chip">🍽️ {{ serve }}</span>
+        <span v-for="t in dietTags" :key="t.text" class="chip" :class="t.cls">{{ t.text }}</span>
+        <span class="chip">💰 人均 ¥{{ price }}</span>
+        <span class="chip" :class="openSt.cls">
+          <i class="live-dot"></i>{{ openSt.label }} · {{ hours[0] }}–{{ hours[1] }}
+        </span>
       </div>
       <p class="content">{{ post.content }}</p>
 
@@ -289,7 +316,21 @@ function starStr(n) {
 .lb-tip{ position:absolute; bottom:28px; left:50%; transform:translateX(-50%); font-size:12px; color:rgba(255,255,255,.7); }
 
 .post h1{ font-size:27px; margin-bottom:10px; line-height:1.3; }
-.meta{ color:#bba; font-size:13px; margin-bottom:22px; }
+/* 笔记类型横幅 */
+.type-banner{ border-radius:12px; padding:9px 14px; font-size:12.5px; font-weight:700; margin-bottom:12px; }
+.type-banner.plant{ background:#e9f7ee; color:#1d7a3e; border:1px solid #cdeeda; }
+.type-banner.avoid{ background:#fdeae6; color:#c23b22; border:1px solid #ffd1c4; }
+/* 菜品信息标签 */
+.info-chips{ display:flex; flex-wrap:wrap; gap:7px; margin-bottom:18px; }
+.chip{ font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:999px; background:#f6eee6; color:#7a6a5d; }
+.chip.low{ background:#e9f7ee; color:#1d7a3e; }
+.chip.mid{ background:#fff1e0; color:#b07010; }
+.chip.high,.chip.warn{ background:#fdeae6; color:#c23b22; }
+.chip.safe{ background:#e9f7ee; color:#1d7a3e; }
+.chip.on{ background:#e9f7ee; color:#1d7a3e; }
+.chip.off{ background:#f1ece5; color:#9b8c7e; }
+.live-dot{ width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:4px; background:currentColor; }
+.meta{ color:#bba; font-size:13px; margin-bottom:16px; }
 .meta .author{ color:var(--tomato); cursor:pointer; font-weight:600; }
 .meta .shop-chip{ display:inline-block; background:#fff2e8; color:#b4652f; border:1px solid #ffd9bf;
   border-radius:999px; padding:2px 10px; margin-right:8px; font-size:12.5px; font-weight:700; }

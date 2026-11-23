@@ -55,6 +55,10 @@ export function useLikes() {
       counts.value = nextCounts
 
       useToast().toast(data.liked ? '已点赞 ❤️' : '已取消点赞', data.liked ? 'success' : 'info')
+      // 成长体系：点赞 +2 积分并计入每周任务（仅点赞成功时上报，避免循环依赖用动态导入）
+      if (data.liked) {
+        import('./useGrowth.js').then(m => m.useGrowth().onAction('like')).catch(() => {})
+      }
       return data
     } catch (e) {
       useToast().toast(e.message || '点赞操作失败', 'error')

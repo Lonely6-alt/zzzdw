@@ -41,6 +41,10 @@ export function useFavorites() {
         useToast().toast('已取消收藏', 'info')
       }
       ids.value = new Set(ids.value) // 触发响应式更新
+      // 成长体系：收藏 +5 积分并计入每周任务（避免循环依赖用动态导入）
+      if (data.favorited) {
+        import('./useGrowth.js').then(m => m.useGrowth().onAction('fav')).catch(() => {})
+      }
       return data
     } catch (e) {
       useToast().toast(e.message || '收藏操作失败', 'error')

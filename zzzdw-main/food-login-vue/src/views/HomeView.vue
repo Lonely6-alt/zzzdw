@@ -3,16 +3,20 @@ import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { authUser, getToken } from '../composables/useAuth.js'
 import { useReviews } from '../composables/useReviews.js'
-import { useFavorites } from '../composables/useFavorites.js'
 import { useLikes } from '../composables/useLikes.js'
 import { useToast } from '../composables/useToast.js'
-import { CAT_NAMES, catIcon, catBg, catAccent, catSoft, catPhoto } from '../data/categories.js'
+import { CAT_NAMES, catIcon } from '../data/categories.js'
+import PostCard from '../components/PostCard.vue'
+import HScroller from '../components/HScroller.vue'
+import { useFoodMeta } from '../composables/useFoodMeta.js'
+import { useGrowth } from '../composables/useGrowth.js'
 
 const router = useRouter()
 const { toast } = useToast()
-const { displayRating, count: reviewCount } = useReviews()
-const { isFav, toggle: toggleFavApi } = useFavorites()
-const { isLiked, countOf, seed, toggle: toggleLikeApi } = useLikes()
+const { displayRating } = useReviews()
+const { countOf, seed } = useLikes()
+const { noteTypeOf, setNoteType } = useFoodMeta()
+const growth = useGrowth()
 
 /* ---------------- 状态 ---------------- */
 const posts = ref([])
@@ -23,10 +27,7 @@ const sortBy = ref('default') // default | hot | rating
 const activeTab = ref('hot')  // hot | explore | rank | new
 
 const PAGE_SIZE = 12
-const shownCount = ref(PAGE_SIZE)
-const loadingMore = ref(false)
-
-const brokenCats = ref(new Set())   // 分类插画加载失败的分类名
+const page = ref(1)           // 当前页码（分页浏览，上一页/下一页切换）
 
 const TABS = [
   { key: 'hot', label: '热门', emoji: '🔥' },
@@ -41,15 +42,6 @@ const SORTS = [
   { key: 'rating', label: '评分优先', desc: '评分从高到低' }
 ]
 
-/* ---------------- Banner ---------------- */
-const banners = [
-  { title: '秋日探店季 · 满 100 减 30', sub: '精选 20 家新店，探店有礼', emoji: '🍂', cls: 'b1' },
-  { title: '新店开张 · 首单 5 折', sub: '限时三天，先到先得', emoji: '🎉', cls: 'b2' },
-  { title: '深夜食堂 · 22 点后专享', sub: '夜宵党的专属福利', emoji: '🌙', cls: 'b3' }
-]
-const bannerIdx = ref(0)
-let bannerTimer = null
-
 /* ---------------- 展示辅助 ---------------- */
 const SHOP_POOL = ['巷口小馆', '老地方食堂', '街角食光', '私房一味', '深夜食堂', '暖食屋', '半日闲', '食光小铺', '鲜物记', '好味来', '慢炖锅', '一味居']
 function shopName(p) {
@@ -60,28 +52,6 @@ function likesOf(p) {
 }
 function ratingOf(p) {
   return displayRating(p) || 0
-}
-function imgOf(p) {
-  // 卡片封面统一用分类卡通插画，不使用真实照片；本地 SVG 加载失败则回退渐变 + emoji
-  const photo = catPhoto(p.category)
-  return photo && !brokenCats.value.has(p.category) ? photo : ''
-}
-function onImgError(p) {
-  const next = new Set(brokenCats.value)
-  next.add(p.category)
-  brokenCats.value = next
-}
-
-function escapeHtml(s) {
-  return (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
-}
-function hl(text) {
-  const raw = escapeHtml(text)
-  const kw = keyword.value.trim()
-  if (!kw) return raw
-  const safe = escapeHtml(kw).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  try { return raw.replace(new RegExp(safe, 'gi'), m => `<mark class="hl">${m}</mark>`) }
-  catch { return raw }
 }
 
 /* ---------------- 筛选 / 排序 ---------------- */
@@ -117,10 +87,65 @@ const filtered = computed(() => {
   return arr
 })
 
-const visible = computed(() => filtered.value.slice(0, shownCount.value))
-const hasMore = computed(() => shownCount.value < filtered.value.length)
+const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / PAGE_SIZE)))
+const visible = computed(() => filtered.value.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE))
 
-watch([keyword, activeTab, sortBy], () => { shownCount.value = PAGE_SIZE })
+// 页码列表：页数多时中间用省略号折叠，始终能看到首尾页
+const pageList = computed(() => {
+  const total = totalPages.value
+  const cur = page.value
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const set = new Set([1, 2, total - 1, total, cur, cur - 1, cur + 1])
+  const arr = [...set].filter(n => n >= 1 && n <= total).sort((a, b) => a - b)
+  const out = []
+  arr.forEach((n, i) => {
+    if (i && n - arr[i - 1] > 1) out.push('…')
+    out.push(n)
+  })
+  return out
+})
+
+function gotoPage(n) {
+  if (n === '…' || n === page.value || n < 1 || n > totalPages.value) return
+  page.value = n
+  nextTick(() => {
+    const el = document.querySelector('.grid')
+    if (el) window.scrollTo({ top: el.offsetTop - 70, behavior: 'smooth' })
+  })
+}
+
+watch([keyword, activeTab, sortBy], () => { page.value = 1 })
+
+/* ---------------- 避雷板块 ---------------- */
+const avoidPosts = computed(() => {
+  return posts.value
+    .filter(p => noteTypeOf(p) === 'avoid')
+    .sort((a, b) => ratingOf(a) - ratingOf(b) || (b.reviewCount || 0) - (a.reviewCount || 0))
+    .slice(0, 8)
+})
+
+/* ---------------- 季节限定专区（随月份自动换主题） ---------------- */
+const SEASONS = {
+  spring: { name: '春日尝鲜季', emoji: '🌸', months: [3, 4, 5], cats: ['轻食沙拉', '甜品时间', '咖啡馆'],
+    desc: '野餐轻食、第一口春日甜品与花香咖啡，把春天吃进肚子里', grad: 'linear-gradient(120deg,#9be15d,#00e3ae)' },
+  summer: { name: '夏日冰爽季', emoji: '🍉', months: [6, 7, 8], cats: ['甜品时间', '咖啡馆', '烧烤夜宵'],
+    desc: '冰饮、雪糕与晚风烧烤，清凉一夏的正确打开方式', grad: 'linear-gradient(120deg,#f6d365,#fda085)' },
+  autumn: { name: '秋日暖心季', emoji: '🍂', months: [9, 10, 11], cats: ['面食控', '火锅江湖', '烧烤夜宵'],
+    desc: '一碗热汤面、一顿围炉火锅，贴好秋膘再过冬', grad: 'linear-gradient(120deg,#ff9a44,#fc6076)' },
+  winter: { name: '冬日进补季', emoji: '♨️', months: [12, 1, 2], cats: ['火锅江湖', '面食控', '日料局'],
+    desc: '沸腾的锅子与滚烫的汤头，寒风里的治愈系美味', grad: 'linear-gradient(120deg,#4facfe,#c471ed)' }
+}
+const season = computed(() => {
+  const m = new Date().getMonth() + 1
+  for (const s of Object.values(SEASONS)) if (s.months.includes(m)) return s
+  return SEASONS.autumn
+})
+const seasonPosts = computed(() => {
+  return posts.value
+    .filter(p => season.value.cats.includes(p.category))
+    .sort((a, b) => ratingOf(b) - ratingOf(a))
+    .slice(0, 6)
+})
 
 const sortLabel = computed(() => {
   if (sortBy.value === 'hot') return '人气'
@@ -148,18 +173,8 @@ async function loadPosts() {
     posts.value = []
   } finally {
     loading.value = false
-    shownCount.value = PAGE_SIZE
+    page.value = 1
   }
-}
-
-function loadMore() {
-  if (loading.value || loadingMore.value || !hasMore.value) return
-  loadingMore.value = true
-  // 小延迟让"正在加载"能露出来，同时避免滚动触底时疯狂追加
-  setTimeout(() => {
-    shownCount.value = Math.min(shownCount.value + PAGE_SIZE, filtered.value.length)
-    loadingMore.value = false
-  }, 220)
 }
 
 /* ---------------- 下拉刷新（触屏）+ 滚动加载 ---------------- */
@@ -194,20 +209,10 @@ async function refresh() {
   toast('已刷新', 'success')
 }
 
-function onWindowScroll() {
-  if (loading.value || loadingMore.value || !hasMore.value) return
-  const doc = document.documentElement
-  if (window.innerHeight + window.scrollY >= doc.scrollHeight - 320) loadMore()
-}
-
 onMounted(async () => {
   window.addEventListener('touchstart', onTouchStart, { passive: true })
   window.addEventListener('touchmove', onTouchMove, { passive: true })
   window.addEventListener('touchend', onTouchEnd)
-  window.addEventListener('scroll', onWindowScroll, { passive: true })
-  bannerTimer = setInterval(() => {
-    bannerIdx.value = (bannerIdx.value + 1) % banners.length
-  }, 4000)
   await loadPosts()
 })
 
@@ -215,14 +220,10 @@ onUnmounted(() => {
   window.removeEventListener('touchstart', onTouchStart)
   window.removeEventListener('touchmove', onTouchMove)
   window.removeEventListener('touchend', onTouchEnd)
-  window.removeEventListener('scroll', onWindowScroll)
-  if (bannerTimer) clearInterval(bannerTimer)
 })
 
 /* ---------------- 交互 ---------------- */
 function openPost(id) { router.push(`/post/${id}`) }
-async function onLike(p) { await toggleLikeApi(p.id, p.likeCount || 0) }
-async function onFav(id) { await toggleFavApi(id) }
 
 const showFilter = ref(false)
 function pickSort(key) {
@@ -234,14 +235,18 @@ function resetAll() {
   keyword.value = ''
   sortBy.value = 'default'
   activeTab.value = 'hot'
-  shownCount.value = PAGE_SIZE
+  page.value = 1
 }
 
 /* ---------------- 发布 ---------------- */
 const showForm = ref(false)
-const form = ref({ title: '', category: '面食控', content: '', emoji: '🍜' })
+const form = ref({ title: '', category: '面食控', content: '', emoji: '🍜', noteType: 'plant' })
 const formMsg = ref('')
 const EMOJI_PICKS = ['🍜', '🍣', '🍔', '🥗', '🍰', '☕', '🍢', '🍲', '🍱', '🥟', '🍡', '🍟']
+const NOTE_TYPES = [
+  { key: 'plant', label: '种草', emoji: '🌱', desc: '真心推荐，让大家去尝尝' },
+  { key: 'avoid', label: '避雷', emoji: '⚠️', desc: '踩雷警告，帮大家避坑' }
+]
 async function publish() {
   formMsg.value = ''
   if (!form.value.title.trim()) { formMsg.value = '先给这道美食起个名字吧～'; return }
@@ -254,8 +259,11 @@ async function publish() {
     })
     const data = await r.json().catch(() => ({}))
     if (!r.ok) { formMsg.value = data.message || '发布失败'; return }
+    // 记录笔记类型（种草/避雷），并计入成长体系（发布笔记 +20 积分、口味挑战）
+    setNoteType({ title: form.value.title.trim() }, form.value.noteType)
+    growth.onAction('publish', { category: form.value.category })
     showForm.value = false
-    form.value = { title: '', category: '面食控', content: '', emoji: '🍜' }
+    form.value = { title: '', category: '面食控', content: '', emoji: '🍜', noteType: 'plant' }
     await loadPosts()
     toast('发布成功 🎉', 'success')
   } catch { formMsg.value = '网络错误' }
@@ -301,28 +309,61 @@ async function publish() {
       >{{ t.emoji }} {{ t.label }}</button>
     </nav>
 
-    <!-- 轮播 Banner -->
-    <section class="banner" aria-label="活动banner">
-      <div class="banner-track" :style="{ transform: `translateX(-${bannerIdx * 100}%)` }">
-        <article v-for="(b, i) in banners" :key="i" class="slide" :class="b.cls">
-          <div class="slide-text">
-            <h3>{{ b.title }}</h3>
-            <p>{{ b.sub }}</p>
+
+    <!-- 避雷预警板块：单独展示避雷笔记，帮大家避坑 -->
+    <section v-if="!keyword.trim() && avoidPosts.length" class="avoid-sec" aria-label="避雷笔记">
+      <div class="sec-title">
+        <h2>⚠️ 避雷预警</h2>
+        <span class="sec-desc">真实踩雷反馈，下单前先看一眼</span>
+      </div>
+      <HScroller>
+        <article
+          v-for="(p, i) in avoidPosts"
+          :key="'av' + p.id"
+          class="avoid-card"
+          :style="{ '--i': i }"
+          @click="openPost(p.id)"
+        >
+          <div class="av-top">
+            <span class="av-emoji">{{ p.emoji || '⚠️' }}</span>
+            <span class="av-score" :class="{ bad: ratingOf(p) > 0 && ratingOf(p) < 3.5 }">
+              ★ {{ ratingOf(p).toFixed(1) }}
+            </span>
           </div>
-          <span class="slide-emoji">{{ b.emoji }}</span>
+          <h4 class="av-title">{{ p.title }}</h4>
+          <p class="av-shop">🏠 {{ shopName(p) }} · {{ p.category }}</p>
+          <p class="av-reason">{{ (p.content || '').slice(0, 42) }}{{ (p.content || '').length > 42 ? '…' : '' }}</p>
         </article>
+      </HScroller>
+    </section>
+
+    <!-- 季节限定专区：随季节自动更换主题 -->
+    <section v-if="!keyword.trim() && seasonPosts.length" class="season-sec" :style="{ '--sg': season.grad }" aria-label="季节限定">
+      <div class="season-head">
+        <span class="season-emoji">{{ season.emoji }}</span>
+        <div class="season-text">
+          <h2>{{ season.name }} <em class="season-tag">季节限定</em></h2>
+          <p>{{ season.desc }}</p>
+        </div>
       </div>
-      <div class="dots">
-        <button
-          v-for="(b, i) in banners"
-          :key="'d' + i"
-          type="button"
-          class="dot"
-          :class="{ on: bannerIdx === i }"
-          :aria-label="`第 ${i + 1} 张`"
-          @click="bannerIdx = i"
-        />
-      </div>
+      <HScroller>
+        <article
+          v-for="(p, i) in seasonPosts"
+          :key="'se' + p.id"
+          class="season-card"
+          :style="{ '--i': i }"
+          @click="openPost(p.id)"
+        >
+          <div class="se-cover">
+            <span class="se-emoji">{{ p.emoji || catIcon(p.category) }}</span>
+            <span class="se-cat">{{ catIcon(p.category) }} {{ p.category }}</span>
+          </div>
+          <div class="se-body">
+            <h4>{{ p.title }}</h4>
+            <span class="se-score">★ {{ ratingOf(p).toFixed(1) }} · 💬 {{ p.reviewCount || 0 }}</span>
+          </div>
+        </article>
+      </HScroller>
     </section>
 
     <!-- 下拉刷新提示（触屏） -->
@@ -357,59 +398,43 @@ async function publish() {
       <button class="state-btn" type="button" @click="resetAll">重置筛选</button>
     </div>
 
-    <!-- 卡片流：两/三列等宽等高，封面固定 4:3 -->
+    <!-- 卡片流：多图轮播卡片 + 悬浮浮窗 -->
     <div v-else class="grid">
-      <article
+      <PostCard
         v-for="(p, i) in visible"
         :key="p.id"
-        class="card"
-        :style="{ '--ac': catAccent(p.category), '--i': i }"
-        @click="openPost(p.id)"
-      >
-        <div class="cover" :style="{ background: catBg(p.category) }">
-          <img
-            v-if="imgOf(p)"
-            :src="imgOf(p)"
-            :alt="p.title"
-            loading="lazy"
-            decoding="async"
-            @error="onImgError(p)"
-          />
-          <div v-else class="cover-fallback">
-            <span class="cover-glow"></span>
-            <span class="cover-emoji">{{ p.emoji || catIcon(p.category) }}</span>
-          </div>
-          <span class="cover-shade"></span>
-          <span class="cover-cat">{{ catIcon(p.category) }} {{ p.category }}</span>
-
-          <button
-            class="fav-btn"
-            :class="{ on: isFav(p.id) }"
-            type="button"
-            :title="isFav(p.id) ? '取消收藏' : '收藏'"
-            @click.stop="onFav(p.id)"
-          >{{ isFav(p.id) ? '★' : '☆' }}</button>
-        </div>
-
-        <div class="card-body">
-          <h3 class="shop">{{ shopName(p) }}</h3>
-          <p class="line" v-html="hl(p.title)"></p>
-          <div class="meta">
-            <button class="like" :class="{ on: isLiked(p.id) }" type="button" @click.stop="onLike(p)">
-              {{ isLiked(p.id) ? '❤️' : '🤍' }}<i>{{ likesOf(p) }}</i>
-            </button>
-            <span class="cmt" @click.stop="openPost(p.id)">💬 {{ p.reviewCount || 0 }}</span>
-          </div>
-        </div>
-      </article>
+        :p="p"
+        :style="{ '--i': i }"
+        @open="openPost"
+      />
     </div>
 
-    <!-- 加载更多 / 到底 -->
-    <div v-if="!loading && !failed && filtered.length" class="more">
-      <span v-if="loadingMore" class="more-loading"><span class="spinner sm"></span>正在加载更多…</span>
-      <span v-else-if="!hasMore" class="more-end">— 已经到底啦，去看看别的标签 —</span>
-      <span v-else class="more-tip">继续上滑加载更多</span>
-    </div>
+    <!-- 分页：上一页 / 页码 / 下一页 -->
+    <nav v-if="!loading && !failed && totalPages > 1" class="pager" aria-label="分页">
+      <button
+        type="button"
+        class="pg-btn"
+        :disabled="page === 1"
+        @click="gotoPage(page - 1)"
+      >‹ 上一页</button>
+      <template v-for="(n, i) in pageList" :key="i">
+        <span v-if="n === '…'" class="pg-dots">…</span>
+        <button
+          v-else
+          type="button"
+          class="pg-num"
+          :class="{ on: n === page }"
+          @click="gotoPage(n)"
+        >{{ n }}</button>
+      </template>
+      <button
+        type="button"
+        class="pg-btn"
+        :disabled="page === totalPages"
+        @click="gotoPage(page + 1)"
+      >下一页 ›</button>
+    </nav>
+    <p v-else-if="!loading && !failed && filtered.length" class="pg-only">— 共 {{ filtered.length }} 篇笔记 —</p>
 
     <!-- 发布入口 -->
     <button class="fab" type="button" title="发布美食笔记" @click="showForm = true">＋</button>
@@ -442,6 +467,22 @@ async function publish() {
       <div class="sheet form-sheet">
         <h3>发布一道美食</h3>
         <p class="sheet-sub">分享你的私藏，让更多人尝到好味道</p>
+        <div class="field">
+          <label>笔记类型</label>
+          <div class="type-picker">
+            <button
+              v-for="t in NOTE_TYPES"
+              :key="t.key"
+              type="button"
+              class="type-opt"
+              :class="{ on: form.noteType === t.key, avoid: t.key === 'avoid' }"
+              @click="form.noteType = t.key"
+            >
+              <b>{{ t.emoji }} {{ t.label }}</b>
+              <i>{{ t.desc }}</i>
+            </button>
+          </div>
+        </div>
         <div class="field">
           <label>标题</label>
           <input v-model="form.title" maxlength="30" placeholder="例如：巷子里的无名拉面" />
@@ -527,74 +568,81 @@ async function publish() {
 .tab.on{ background:linear-gradient(120deg,var(--orange),var(--tomato)); color:#fff; border-color:transparent;
   box-shadow:0 6px 14px rgba(255,90,60,.26); }
 
-/* ===== Banner ===== */
-.banner{ position:relative; overflow:hidden; border-radius:20px; margin-bottom:18px; box-shadow:0 12px 28px rgba(255,90,60,.16); }
-.banner-track{ display:flex; transition:transform .55s cubic-bezier(.4,0,.2,1); }
-.slide{ flex:0 0 100%; height:132px; display:flex; align-items:center; gap:16px; padding:0 26px; color:#fff; }
-.slide.b1{ background:linear-gradient(120deg,#ff8a4c,#ff5f3d); }
-.slide.b2{ background:linear-gradient(120deg,#ffb26b,#ff8a3d); }
-.slide.b3{ background:linear-gradient(120deg,#ff7e5f,#feb47b); }
-.slide-text{ flex:1; min-width:0; }
-.slide-text h3{ font-size:17px; font-weight:800; text-shadow:0 2px 8px rgba(120,30,10,.22); }
-.slide-text p{ font-size:12.5px; opacity:.92; margin-top:6px; }
-.slide-emoji{ font-size:48px; filter:drop-shadow(0 8px 12px rgba(120,40,20,.28)); }
-.dots{ position:absolute; left:26px; bottom:12px; display:flex; gap:6px; }
-.dot{ width:6px; height:6px; padding:0; border:0; border-radius:50%; background:rgba(255,255,255,.45); cursor:pointer; transition:.25s; }
-.dot.on{ width:16px; border-radius:3px; background:#fff; }
-
 /* 下拉刷新 */
 .pull-tip{ display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--muted); overflow:hidden; transition:height .1s; }
 
+/* ===== 横滑板块通用（翻页按钮在 HScroller 组件内） ===== */
+.sec-title{ display:flex; align-items:baseline; gap:10px; margin:4px 0 10px; }
+.sec-title h2{ font-size:17px; font-weight:800; margin:0; }
+.sec-desc{ font-size:12px; color:var(--muted); }
+
+/* ===== 避雷板块 ===== */
+.avoid-sec{ margin:6px 0 18px; }
+.avoid-card{ flex:0 0 240px; background:#fff; border:1.5px solid #ffd9d0; border-radius:16px; padding:13px 14px;
+  cursor:pointer; transition:.2s; animation:cardIn .4s backwards; animation-delay:calc(var(--i,0) * 40ms);
+  box-shadow:0 8px 18px rgba(220,80,50,.08); }
+.avoid-card:hover{ transform:translateY(-4px); box-shadow:0 14px 26px rgba(220,80,50,.16); border-color:#ff9d85; }
+.av-top{ display:flex; align-items:center; justify-content:space-between; }
+.av-emoji{ font-size:26px; }
+.av-score{ font-size:12.5px; font-weight:800; color:#b07010; }
+.av-score.bad{ color:#c23b22; }
+.av-title{ margin:8px 0 4px; font-size:13.5px; font-weight:800; color:var(--ink);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.av-shop{ margin:0; font-size:11.5px; color:var(--muted); }
+.av-reason{ margin:7px 0 0; font-size:11.5px; color:#8a7663; line-height:1.5;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+
+/* ===== 季节限定专区 ===== */
+.season-sec{ position:relative; overflow:hidden; border-radius:22px; padding:18px 18px 8px; margin:6px 0 18px;
+  background:var(--sg); box-shadow:0 14px 30px rgba(120,60,20,.16); color:#fff; }
+.season-sec::before{ content:""; position:absolute; inset:0; background:radial-gradient(circle at 88% 12%,rgba(255,255,255,.28),transparent 42%); pointer-events:none; }
+.season-head{ position:relative; display:flex; align-items:center; gap:14px; margin-bottom:12px; }
+.season-emoji{ font-size:40px; filter:drop-shadow(0 6px 10px rgba(80,40,10,.3)); }
+.season-text h2{ margin:0; font-size:18px; font-weight:800; display:flex; align-items:center; gap:8px; }
+.season-tag{ font-style:normal; font-size:10.5px; font-weight:800; padding:3px 9px; border-radius:999px;
+  background:rgba(255,255,255,.9); color:#c2502a; letter-spacing:1px; }
+.season-text p{ margin:5px 0 0; font-size:12.5px; opacity:.94; }
+.season-card{ position:relative; flex:0 0 190px; background:rgba(255,255,255,.94); border-radius:16px; overflow:hidden;
+  cursor:pointer; transition:.2s; animation:cardIn .4s backwards; animation-delay:calc(var(--i,0) * 40ms); color:var(--ink); }
+.season-card:hover{ transform:translateY(-4px); box-shadow:0 14px 26px rgba(60,30,10,.22); }
+.se-cover{ position:relative; height:96px; display:flex; align-items:center; justify-content:center; background:#fff3e6; }
+.se-emoji{ font-size:44px; transition:transform .3s; }
+.season-card:hover .se-emoji{ transform:scale(1.15) rotate(-6deg); }
+.se-cat{ position:absolute; left:9px; bottom:8px; font-size:10.5px; font-weight:700; color:#fff;
+  padding:2px 8px; border-radius:999px; background:rgba(40,20,10,.34); backdrop-filter:blur(3px); }
+.se-body{ padding:10px 12px 12px; }
+.se-body h4{ margin:0; font-size:12.5px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.se-score{ font-size:11px; color:var(--muted); display:block; margin-top:4px; }
+
+/* ===== 发布：笔记类型选择 ===== */
+.type-picker{ display:flex; gap:9px; }
+.type-opt{ flex:1; text-align:left; border:1.5px solid #ecdfd2; background:#fff; border-radius:13px;
+  padding:10px 13px; cursor:pointer; font-family:inherit; transition:.2s; }
+.type-opt b{ display:block; font-size:13.5px; color:var(--ink); }
+.type-opt i{ font-style:normal; font-size:11px; color:var(--muted); display:block; margin-top:3px; }
+.type-opt.on{ border-color:var(--orange); background:#fff4ea; }
+.type-opt.on b{ color:var(--tomato); }
+.type-opt.avoid.on{ border-color:#ff9d85; background:#fff1ed; }
+.type-opt.avoid.on b{ color:#c23b22; }
+
 /* ===== 卡片流 ===== */
 .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
-.card{ background:#fff; border:1.5px solid #f6ebe0; border-radius:18px; overflow:hidden; cursor:pointer;
-  box-shadow:0 8px 20px rgba(255,120,80,.07); transition:transform .22s, box-shadow .22s, border-color .22s;
-  animation:cardIn .4s backwards; animation-delay:calc(var(--i,0) * 32ms); }
 @keyframes cardIn{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
-.card:hover{ transform:translateY(-5px); box-shadow:0 18px 34px rgba(255,90,60,.16); border-color:#ffd9bf; }
 
-.cover{ position:relative; width:100%; aspect-ratio:4 / 3; overflow:hidden;
-  display:flex; align-items:center; justify-content:center; }
-.cover img{ width:100%; height:100%; object-fit:cover; display:block; transition:transform .45s ease; }
-.card:hover .cover img{ transform:scale(1.08); }
-/* 无实拍图时的美化兜底：柔光圆斑 + 玻璃底座 + emoji */
-.cover-fallback{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; overflow:hidden; }
-.cover-glow{ position:absolute; width:150px; height:150px; border-radius:50%;
-  background:radial-gradient(circle,rgba(255,255,255,.75),rgba(255,255,255,0) 70%); }
-.cover-emoji{ position:relative; font-size:58px; line-height:1; padding:18px; border-radius:50%;
-  background:rgba(255,255,255,.55); box-shadow:0 10px 26px rgba(160,90,50,.18), inset 0 0 0 1.5px rgba(255,255,255,.7);
-  backdrop-filter:blur(2px); transition:transform .35s; }
-.card:hover .cover-emoji{ transform:scale(1.12) rotate(-5deg); }
-/* 底部渐变压暗，让分类角标清晰 */
-.cover-shade{ position:absolute; inset:0; pointer-events:none;
-  background:linear-gradient(to top,rgba(60,30,15,.42),rgba(60,30,15,0) 42%); }
-.cover-cat{ position:absolute; left:10px; bottom:9px; z-index:2; pointer-events:none;
-  font-size:11px; font-weight:700; color:#fff; letter-spacing:.2px;
-  padding:3px 9px; border-radius:999px; background:rgba(40,20,10,.34); backdrop-filter:blur(4px); }
-.fav-btn{ position:absolute; top:10px; right:10px; width:30px; height:30px; border-radius:50%; border:0; cursor:pointer;
-  font-size:14px; line-height:1; color:#a98f78; background:rgba(255,255,255,.92); transition:.2s; }
-.fav-btn:hover{ transform:scale(1.1); color:var(--orange); }
-.fav-btn.on{ color:#fff; background:linear-gradient(120deg,var(--orange),var(--tomato)); box-shadow:0 5px 12px rgba(255,90,60,.32); }
-
-.card-body{ padding:11px 13px 12px; min-height:88px; display:flex; flex-direction:column; }
-.shop{ font-size:13.5px; font-weight:800; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.line{ font-size:12.5px; color:#9b8c7e; line-height:1.5; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.meta{ display:flex; align-items:center; gap:12px; margin-top:auto; padding-top:9px; }
-.like{ display:flex; align-items:center; gap:4px; border:0; background:transparent; cursor:pointer;
-  font-size:12px; color:var(--muted); padding:0; font-family:inherit; transition:.15s; }
-.like:hover{ color:var(--tomato); }
-.like i{ font-style:normal; font-weight:700; }
-.like.on{ color:var(--tomato); }
-.like.on{ animation:pop .3s ease; }
-@keyframes pop{ 0%{ transform:scale(1); } 45%{ transform:scale(1.18); } 100%{ transform:scale(1); } }
-.cmt{ font-size:12px; color:var(--muted); cursor:pointer; }
-.cmt:hover{ color:var(--tomato); }
-
-/* 加载更多 */
-.more{ display:flex; justify-content:center; align-items:center; gap:8px; padding:22px 0 4px; font-size:12.5px; color:#c4ab94; }
-.more-loading{ display:flex; align-items:center; gap:7px; color:var(--muted); }
+/* 分页 */
+.pager{ display:flex; justify-content:center; align-items:center; gap:7px; padding:24px 0 6px; flex-wrap:wrap; }
+.pg-btn{ border:1.5px solid #f0ddd0; background:#fff; color:#8a6a52; font-size:12.5px; font-weight:700;
+  padding:7px 14px; border-radius:999px; cursor:pointer; font-family:inherit; transition:.2s; }
+.pg-btn:hover:not(:disabled){ border-color:var(--orange); color:var(--tomato); }
+.pg-btn:disabled{ opacity:.4; cursor:not-allowed; }
+.pg-num{ min-width:32px; height:32px; border:0; border-radius:50%; background:transparent; color:#8a6a52;
+  font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; transition:.2s; }
+.pg-num:hover{ background:#ffefe4; color:var(--tomato); }
+.pg-num.on{ background:linear-gradient(120deg,var(--orange),var(--tomato)); color:#fff;
+  box-shadow:0 5px 12px rgba(255,90,60,.3); }
+.pg-dots{ color:#c4ab94; font-weight:700; padding:0 2px; }
+.pg-only{ text-align:center; padding:24px 0 6px; font-size:12.5px; color:#c4ab94; }
 .spinner{ width:26px; height:26px; border-radius:50%; border:3px solid #f0e6db; border-top-color:var(--tomato); animation:spin .8s linear infinite; }
-.spinner.sm{ width:14px; height:14px; border-width:2px; }
 
 /* 骨架屏 */
 .sk-card{ background:#fff; border:1.5px solid #f6ebe0; border-radius:18px; overflow:hidden; }

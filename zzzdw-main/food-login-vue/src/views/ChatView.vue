@@ -318,6 +318,32 @@ async function copyMsgText(m) {
     document.body.removeChild(ta)
   }
 }
+
+// 把本地消息标记为已撤回（自己操作成功后 / WS 收到撤回广播时共用）
+function markRecalled(msgId) {
+  const m = messages.value.find(x => Number(x.msgId) === Number(msgId))
+  if (m) m.content = '[RECALLED]'
+}
+
+// 撤回自己发送的消息（2 分钟内），软删除，双方都会看到「撤回了一条消息」
+async function recallMsg() {
+  const m = msgMenu.value.msg
+  if (!m || m.msgId == null) { closeMsgMenu(); return }
+  closeMsgMenu()
+  try {
+    const url = activeType.value === 'private'
+      ? `${API}/sessions/${activeId.value}/messages/${m.msgId}/recall`
+      : `${API}/groups/${activeId.value}/messages/${m.msgId}/recall`
+    const r = await fetch(url, { method: 'POST', headers: h() })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok) throw new Error(d.message || '撤回失败')
+    markRecalled(m.msgId)
+    if (activeType.value === 'private') loadSessions(); else loadGroups()
+    toast('消息已撤回', 'success')
+  } catch (e) {
+    toast(e.message, 'error')
+  }
+}
 async function deleteMsg() {
   const m = msgMenu.value.msg
   if (!m || m.msgId == null) { closeMsgMenu(); return }
@@ -473,6 +499,15 @@ function handleWsEvent(d) {
     return
   }
 
+  // 消息撤回广播（私聊 / 群聊）：气泡原地替换为「撤回了一条消息」提示
+  if (d.type === 'private_recalled' || d.type === 'group_recalled') {
+    markRecalled(d.msgId)
+    // 同步会话列表摘要
+    if (d.type === 'private_recalled') loadSessions()
+    else loadGroups()
+    return
+  }
+
   // 消息删除广播（私聊 / 群聊）：当前会话正在看则同步移除气泡
   if (d.type === 'private_deleted' || d.type === 'group_deleted') {
     const chatType = d.type === 'private_deleted' ? 'private' : 'group'
@@ -570,16 +605,29 @@ function fmtTime(t) {
 function shortTime(t) {
   return t ? String(t).replace('T', ' ').slice(11, 16) : ''
 }
-// 会话预览：图片消息显示为「[图片]」，避免露出链接或 base64
+// 会话预览：图片消息显示为「[图片]」，撤回消息显示为「消息已撤回」
 function msgPreview(text) {
   if (!text) return ''
-  return /^\[IMG\][\s\S]+\[\/IMG\]$/.test(String(text)) ? '[图片]' : String(text)
+  const c = String(text)
+  if (c === '[RECALLED]') return '消息已撤回'
+  return /^\[IMG\][\s\S]+\[\/IMG\]$/.test(c) ? '[图片]' : c
 }
-// 气泡内容解析：图片消息渲染缩略图，其余按文本展示
+// 气泡内容解析：图片消息渲染缩略图，撤回消息展示提示，其余按文本展示
 function msgOf(m) {
   const c = String(m?.content || '')
+  if (c === '[RECALLED]') return { recalled: true }
   const match = c.match(/^\[IMG\]([\s\S]+)\[\/IMG\]$/)
   return match ? { image: true, url: match[1] } : { image: false, text: c }
+}
+// 是否为我发送的消息（用于右键菜单操作权限判断）
+function isMineMsg(m) {
+  return m && m.senderId != null && myId.value != null && Number(m.senderId) === Number(myId.value)
+}
+// 是否可撤回：自己发的、未撤回过、且发送时间在 2 分钟内（与后端限制一致）
+function canRecall(m) {
+  if (!isMineMsg(m) || msgOf(m).recalled) return false
+  const t = m.sendTime ? new Date(String(m.sendTime)).getTime() : 0
+  return t > 0 && (Date.now() - t) < 2 * 60 * 1000
 }
 // 在线状态：绿色圆点 = 对方 WebSocket 在线，灰色 = 离线
 function isOnline(id) { return id != null && onlineIds.value.has(Number(id)) }
@@ -761,8 +809,12 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
             >
               <div class="bubble" :class="{ mine: isMine(m) }">
                 <span v-if="activeType === 'group' && !isMine(m)" class="b-name">{{ m.senderName }}</span>
+                <!-- 撤回态：整条气泡替换为灰色提示 -->
+                <p v-if="msgOf(m).recalled" class="b-recalled">
+                  {{ isMine(m) ? '你' : (activeType === 'group' ? (m.senderName || '对方') : '对方') }}撤回了一条消息
+                </p>
                 <img
-                  v-if="msgOf(m).image"
+                  v-else-if="msgOf(m).image"
                   class="b-img"
                   :src="msgOf(m).url"
                   alt="菜品图片"
@@ -908,22 +960,35 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
       </div>
     </div>
 
-    <!-- 消息长按/右键菜单 -->
+    <!-- 消息长按/右键菜单：复制 / 撤回 / 删除 -->
     <template v-if="msgMenu.show">
       <div class="msg-menu-mask" @click="closeMsgMenu" @contextmenu.prevent="closeMsgMenu"></div>
       <div class="msg-menu" :style="{ left: msgMenu.x + 'px', top: msgMenu.y + 'px' }" @click.stop>
-        <button type="button" @click="copyMsgText(msgMenu.msg)">
-          <span>📋</span> 复制
+        <button
+          v-if="msgMenu.msg && !msgOf(msgMenu.msg).recalled"
+          type="button"
+          @click="copyMsgText(msgMenu.msg)"
+        >
+          <span>📋</span> {{ msgOf(msgMenu.msg).image ? '复制图片链接' : '复制' }}
         </button>
         <button
-          v-if="msgMenu.msg && Number(msgMenu.msg.senderId) === Number(myId.value)"
+          v-if="msgMenu.msg && canRecall(msgMenu.msg)"
+          type="button"
+          @click="recallMsg"
+        >
+          <span>↩️</span> 撤回
+        </button>
+        <button
+          v-if="msgMenu.msg && isMineMsg(msgMenu.msg) && !msgOf(msgMenu.msg).recalled"
           type="button"
           class="danger"
           @click="deleteMsg"
         >
           <span>🗑️</span> 删除
         </button>
-        <p v-else class="msg-menu-hint">只能删除自己发送的消息</p>
+        <p v-if="msgMenu.msg && !isMineMsg(msgMenu.msg)" class="msg-menu-hint">
+          仅可撤回或删除自己发送的消息
+        </p>
       </div>
     </template>
   </div>
@@ -1020,6 +1085,8 @@ const hasAnyChat = computed(() => sessions.value.length > 0 || groups.value.leng
 .b-name{ display:inline-block; font-size:11px; font-weight:800; color:#b4652f; background:#fff1e2;
   border-radius:6px; padding:1px 7px; margin-bottom:5px; }
 .b-text{ margin:0; font-size:14px; line-height:1.6; word-break:break-word; white-space:pre-wrap; }
+/* 撤回提示：灰色斜体，弱化展示 */
+.b-recalled{ margin:0; font-size:13px; font-style:italic; color:#b99b82; }
 .b-img{ display:block; max-width:100%; max-height:220px; border-radius:10px; cursor:zoom-in; object-fit:cover; background:#fff3e6; }
 .b-time{ display:block; font-size:10.5px; opacity:.6; margin-top:4px; }
 .c-empty{ text-align:center; color:#c4ab94; font-size:13px; padding-top:60px; position:relative; z-index:1; }
