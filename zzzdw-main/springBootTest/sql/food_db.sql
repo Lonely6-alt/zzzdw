@@ -11,7 +11,7 @@
  Target Server Version : 80039 (8.0.39)
  File Encoding         : 65001
 
- Date: 20/11/2026 16:40:30
+ Date: 23/11/2026 11:46:34
 */
 
 SET NAMES utf8mb4;
@@ -155,7 +155,7 @@ CREATE TABLE `chat_message`  (
   CONSTRAINT `fk_cm_receiver` FOREIGN KEY (`receiver_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_cm_sender` FOREIGN KEY (`sender_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_cm_session` FOREIGN KEY (`session_id`) REFERENCES `chat_session` (`session_id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '私信消息表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '私信消息表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of chat_message
@@ -164,6 +164,8 @@ INSERT INTO `chat_message` VALUES (1, 1, 8, 5, 'Hilo', '2026-11-04 09:50:03', 0)
 INSERT INTO `chat_message` VALUES (5, 4, 8, 57, '[IMG]/api/chat/images/202611/43dcaf9490ee410c90cf2e0e33f53bf7.png[/IMG]', '2026-11-18 08:57:30', 1);
 INSERT INTO `chat_message` VALUES (6, 2, 8, 4, '😋', '2026-11-18 09:02:59', 1);
 INSERT INTO `chat_message` VALUES (7, 4, 57, 8, '🍣', '2026-11-20 16:26:26', 1);
+INSERT INTO `chat_message` VALUES (8, 4, 8, 57, '早上好', '2026-11-23 10:37:11', 0);
+INSERT INTO `chat_message` VALUES (9, 2, 8, 4, '[RECALLED]', '2026-11-23 10:44:40', 0);
 
 -- ----------------------------
 -- Table structure for chat_session
@@ -187,9 +189,9 @@ CREATE TABLE `chat_session`  (
 -- Records of chat_session
 -- ----------------------------
 INSERT INTO `chat_session` VALUES (1, 5, 8, '2026-11-04 09:49:54', 'Hilo', '2026-11-04 09:50:03');
-INSERT INTO `chat_session` VALUES (2, 4, 8, '2026-11-04 09:50:10', '😋', '2026-11-18 09:02:59');
+INSERT INTO `chat_session` VALUES (2, 4, 8, '2026-11-04 09:50:10', '[RECALLED]', '2026-11-23 10:44:40');
 INSERT INTO `chat_session` VALUES (3, 4, 5, '2026-11-04 09:50:39', NULL, '2026-11-06 16:46:37');
-INSERT INTO `chat_session` VALUES (4, 8, 57, '2026-11-16 11:41:58', '🍣', '2026-11-20 16:26:26');
+INSERT INTO `chat_session` VALUES (4, 8, 57, '2026-11-16 11:41:58', '早上好', '2026-11-23 10:37:11');
 INSERT INTO `chat_session` VALUES (6, 4, 10, '2026-11-18 09:52:47', NULL, NULL);
 
 -- ----------------------------
@@ -327,12 +329,12 @@ INSERT INTO `post` VALUES (29, '烤面筋，刷酱是老板秘方', '烧烤夜�
 INSERT INTO `post` VALUES (30, '烤鱿鱼须，弹牙又入味', '烧烤夜宵', 12, 'test', 13, '🍂', NULL, '须子烤到卷边，刷甜辣酱。咬下去弹牙，蒜香和孜然混在一起，停不下来。', 4.8, 6, 31, 66, 44, 16.00, 0, 'approved', '大学城', '2026-10-09 00:00:00');
 INSERT INTO `post` VALUES (31, '牛油果鸡胸沙拉，酱是自己调的', '轻食沙拉', 13, 'admin', 20, '🥗', NULL, '鸡胸低温慢煮不柴，牛油果给得大方。油醋汁加第戎芥末，酸度刚好。', 4.4, 0, 44, 15, 61, 29.00, 0, 'approved', '万象城', '2026-10-11 00:00:00');
 INSERT INTO `post` VALUES (32, '藜麦碗，饱腹感一整个下午', '轻食沙拉', 13, 'test', 21, '🥗', NULL, '三色藜麦打底，配烤时蔬和鹰嘴豆。坚果碎提香，淋柠檬汁，清爽又有满足感。', 4.0, 3, 57, 52, 78, 27.00, 0, 'approved', '三里屯', '2026-10-13 00:00:00');
-INSERT INTO `post` VALUES (33, '凯撒沙拉，面包丁现烤的', '轻食沙拉', 13, '哈哈哈', 22, '🥙', NULL, '罗马生菜脆，帕玛森刨得厚。面包丁现烤到酥，凯撒酱顺滑，简单但经典。', 4.7, 6, 70, 89, 10, 38.00, 0, 'approved', '科技园', '2026-10-15 00:00:00');
+INSERT INTO `post` VALUES (33, '凯撒沙拉，面包丁现烤的', '轻食沙拉', 13, '哈哈哈', 22, '🥙', NULL, '罗马生菜脆，帕玛森刨得厚。面包丁现烤到酥，凯撒酱顺滑，简单但经典。', 4.7, 6, 70, 90, 10, 38.00, 0, 'approved', '科技园', '2026-10-15 00:00:00');
 INSERT INTO `post` VALUES (34, '羽衣甘蓝碗，坚果酱很惊喜', '轻食沙拉', 13, 'test', 23, '🥗', NULL, '甘蓝撕小段揉过，软而不涩。配烤南瓜和腰果酱，咸甜交织，减脂也不委屈。', 4.3, 0, 83, 38, 27, 36.00, 0, 'approved', '五道口', '2026-10-17 00:00:00');
 INSERT INTO `post` VALUES (35, '安格斯牛肉堡，肉饼会爆汁', '汉堡炸鸡', 14, 'admin', 30, '🍔', NULL, '牛肉饼厚切现煎，咬开汁水横流。车达芝士融化裹住，酸黄瓜解腻，扎实管饱。', 3.9, 3, 26, 75, 44, 39.00, 0, 'approved', '南锣鼓巷', '2026-10-19 00:00:00');
 INSERT INTO `post` VALUES (36, '辣炸鸡翅，外壳脆到能听见', '汉堡炸鸡', 14, 'test', 25, '🍗', NULL, '双炸工艺，皮薄而脆。辣酱是韩式甜辣，肉嫩脱骨，纸巾要备一打。', 4.6, 6, 39, 24, 61, 29.00, 0, 'approved', '滨江道', '2026-10-21 00:00:00');
 INSERT INTO `post` VALUES (37, '芝士薯条，拉丝能拉半米', '汉堡炸鸡', 14, 'admin', 26, '🍟', NULL, '粗切薯条现炸，铺满融化的芝士。趁热拌开，拉丝到手软，罪恶但快乐。', 4.2, 0, 52, 61, 78, 40.00, 0, 'approved', '老城区', '2026-10-23 00:00:00');
-INSERT INTO `post` VALUES (38, '鳕鱼堡，鱼肉嫩得不用嚼', '汉堡炸鸡', 14, 'test', 27, '🍔', NULL, '鳕鱼柳炸到金黄，内里雪白。塔塔酱给得多，配酸菜，清爽不油腻。', 4.9, 3, 65, 98, 10, 30.00, 0, 'approved', '大学城', '2026-10-25 00:00:00');
+INSERT INTO `post` VALUES (38, '鳕鱼堡，鱼肉嫩得不用嚼', '汉堡炸鸡', 14, 'test', 27, '🍔', NULL, '鳕鱼柳炸到金黄，内里雪白。塔塔酱给得多，配酸菜，清爽不油腻。', 4.9, 3, 65, 99, 10, 30.00, 0, 'approved', '大学城', '2026-10-25 00:00:00');
 INSERT INTO `post` VALUES (39, '韩式炸鸡配啤酒，夜宵顶配', '汉堡炸鸡', 14, 'admin', 28, '🍗', NULL, '炸鸡裹甜辣酱，撒花生碎。配冰啤，外脆里嫩，追剧宵夜首选。', 4.5, 6, 78, 47, 27, 41.00, 0, 'approved', '万象城', '2026-10-27 00:00:00');
 INSERT INTO `post` VALUES (40, '三文鱼刺身，油脂线漂亮', '日料局', 15, '哈哈哈', 35, '🍣', NULL, '鱼腩部位，切得厚。入口即化，油脂香在舌尖化开。蘸一点酱油山葵，鲜味更突出。', 4.1, 0, 21, 84, 44, 48.00, 0, 'approved', '三里屯', '2026-10-29 00:00:00');
 INSERT INTO `post` VALUES (41, '鳗鱼饭，蒲烧酱汁偏甜', '日料局', 15, 'admin', 36, '🍱', NULL, '鳗鱼现烤，皮脆肉糯。酱汁刷了三遍，甜咸适中，铺在热米饭上，连吃两碗。', 4.8, 3, 34, 33, 61, 59.00, 1, 'approved', '科技园', '2026-10-31 00:00:00');
@@ -492,10 +494,10 @@ INSERT INTO `post` VALUES (194, '蘑菇芝士堡，素食友好的选择', '汉�
 INSERT INTO `post` VALUES (195, '猪肚鸡火锅，胡椒味冲，汤白如奶', '火锅江湖', 11, '哈哈哈', 10, '🍲', NULL, '猪肚脆、鸡肉滑，白胡椒暖胃，先喝汤再涮菜。老板人很客气，会主动问口味轻重。', 4.5, 7, 1, 99, 25, 108.00, 0, 'approved', '滨江道', '2026-09-07 16:26:34');
 INSERT INTO `post` VALUES (196, '螺蛳粉，酸笋臭得地道', '面食控', 10, 'test', 5, '🍜', NULL, '汤底用螺蛳和田螺熬，酸笋够冲，加腐竹、木耳和花生，辣度可调。吃完一身味但很值。', 4.6, 8, 72, 48, 66, 28.00, 0, 'approved', '大学城', '2026-10-04 16:26:47');
 INSERT INTO `post` VALUES (197, '冬阴功汤河粉', '面食控', 10, 'admin', 6, '🍤', NULL, '酸辣汤头带香茅和柠檬叶的香气，河粉滑，配虾仁和草菇，开胃。', 4.3, 4, 41, 85, 38, 32.00, 0, 'approved', '万象城', '2026-09-09 16:26:47');
-INSERT INTO `post` VALUES (198, '潮汕蚝烙，边缘焦脆', '烧烤夜宵', 12, '哈哈哈', 13, '🍳', NULL, '生蚝加番薯粉煎到边缘焦脆，中间软嫩，蘸鱼露或甜辣酱都好吃。', 4.4, 2, 1, 34, 29, 42.00, 0, 'approved', '滨江道', '2026-10-25 16:26:47');
+INSERT INTO `post` VALUES (198, '潮汕蚝烙，边缘焦脆', '烧烤夜宵', 12, '哈哈哈', 13, '🍳', NULL, '生蚝加番薯粉煎到边缘焦脆，中间软嫩，蘸鱼露或甜辣酱都好吃。', 5.0, 1, 1, 34, 29, 42.00, 0, 'approved', '滨江道', '2026-10-25 16:26:47');
 INSERT INTO `post` VALUES (199, '抹茶生巧塔', '甜品时间', 16, 'test', 38, '🍫', NULL, '塔皮酥，抹茶生巧微苦回甘，冷藏后切面整齐，配无糖茶刚好。', 4.7, 5, 58, 71, 44, 36.00, 0, 'approved', '三里屯', '2026-10-30 16:26:47');
 INSERT INTO `post` VALUES (200, '花生汤配油条', '甜品时间', 16, 'admin', 39, '🥣', NULL, '花生煮到软糯起沙，汤色乳白微甜，油条现炸蘸着吃，早餐常见。', 4.1, 1, 26, 20, 31, 15.00, 0, 'approved', '老城区', '2026-08-07 16:26:47');
-INSERT INTO `post` VALUES (201, '哈哈哈', '面食控', 10, '哈哈哈', 49, '🍜', NULL, '非常好吃', 4.5, 0, 0, 0, 0, NULL, 0, 'pending', NULL, '2026-11-18 09:44:19');
+INSERT INTO `post` VALUES (201, '哈哈哈', '面食控', 10, '哈哈哈', 49, '🍜', NULL, '非常好吃', 4.5, 0, 0, 0, 0, NULL, 0, 'rejected', NULL, '2026-11-18 09:44:19');
 
 -- ----------------------------
 -- Table structure for post_like
@@ -509,12 +511,14 @@ CREATE TABLE `post_like`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_user_post`(`user_id` ASC, `post_id` ASC) USING BTREE,
   INDEX `idx_post`(`post_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '绗旇?鐐硅禐琛' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '绗旇?鐐硅禐琛' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of post_like
 -- ----------------------------
 INSERT INTO `post_like` VALUES (3, 4, 1, '2026-11-18 09:48:13');
+INSERT INTO `post_like` VALUES (5, 8, 33, '2026-11-23 11:29:46');
+INSERT INTO `post_like` VALUES (6, 8, 38, '2026-11-23 11:29:49');
 
 -- ----------------------------
 -- Table structure for review
@@ -529,7 +533,7 @@ CREATE TABLE `review`  (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '点评时间',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_post`(`post_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '美食点评表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '美食点评表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of review
@@ -538,6 +542,7 @@ INSERT INTO `review` VALUES (1, 1, 'test', 5, '汤头确实香，面也好吃，
 INSERT INTO `review` VALUES (2, 1, 'admin', 5, '牛肉份量足，性价比高。', '2026-11-01 19:30:00');
 INSERT INTO `review` VALUES (3, 2, 'admin', 4, '红油很香，抄手皮薄，下次试试干拌。', '2026-10-31 20:00:00');
 INSERT INTO `review` VALUES (4, 3, 'test', 5, '毛肚真的脆，锅底够味！', '2026-10-30 21:10:00');
+INSERT INTO `review` VALUES (8, 198, '哈哈哈', 5, '是真的好吃', '2026-11-23 11:40:06');
 
 -- ----------------------------
 -- Table structure for shop
