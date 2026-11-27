@@ -11,7 +11,7 @@
  Target Server Version : 80039 (8.0.39)
  File Encoding         : 65001
 
- Date: 23/11/2026 11:46:34
+ Date: 27/11/2026 16:44:54
 */
 
 SET NAMES utf8mb4;
@@ -208,13 +208,16 @@ CREATE TABLE `favorite`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_user_post`(`user_id` ASC, `post_id` ASC) USING BTREE,
   INDEX `idx_post`(`post_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '收藏表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 12 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '收藏表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of favorite
 -- ----------------------------
 INSERT INTO `favorite` VALUES (5, 8, 198, '炭火小串', '2026-11-16 11:03:04', '2026-11-16 11:19:55');
 INSERT INTO `favorite` VALUES (6, 8, 195, '番茄鱼火锅', '2026-11-16 11:03:55', '2026-11-16 11:19:55');
+INSERT INTO `favorite` VALUES (9, 8, 45, '芋圆糖水铺', '2026-11-27 16:02:25', '2026-11-27 16:02:24');
+INSERT INTO `favorite` VALUES (10, 8, 145, '夜市烤生蚝', '2026-11-27 16:02:26', '2026-11-27 16:02:26');
+INSERT INTO `favorite` VALUES (11, 8, 83, '冷萃事务所', '2026-11-27 16:02:27', '2026-11-27 16:02:27');
 
 -- ----------------------------
 -- Table structure for food_order
@@ -292,7 +295,7 @@ CREATE TABLE `post`  (
   INDEX `idx_rating`(`rating` ASC) USING BTREE,
   INDEX `idx_created`(`created_at` ASC) USING BTREE,
   INDEX `idx_shop`(`shop_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 202 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '美食帖子表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 203 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '美食帖子表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of post
@@ -341,7 +344,7 @@ INSERT INTO `post` VALUES (41, '鳗鱼饭，蒲烧酱汁偏甜', '日料局', 15
 INSERT INTO `post` VALUES (42, '寿司卷，蟹柳和牛油果很搭', '日料局', 15, 'test', 31, '🍙', NULL, '醋饭温度刚好，蟹柳蟹籽牛油果卷在一起。一口一个，米香和鲜味平衡得不错。', 4.4, 6, 47, 70, 78, 70.00, 0, 'approved', '五道口', '2026-11-02 00:00:00');
 INSERT INTO `post` VALUES (43, '天妇罗，面衣薄得透光', '日料局', 15, 'admin', 32, '🍤', NULL, '虾和时蔬裹薄衣现炸，不挂油。蘸萝卜泥酱油，酥脆清润，吃得出食材本味。', 4.0, 0, 60, 19, 10, 40.00, 0, 'approved', '南锣鼓巷', '2026-11-04 00:00:00');
 INSERT INTO `post` VALUES (44, '味噌拉面，汤浓面硬刚刚好', '日料局', 15, 'test', 33, '🍥', NULL, '味噌汤底醇厚，叉烧厚切。面偏硬有嚼劲，加玉米和笋干，暖心暖胃。', 4.7, 3, 73, 56, 27, 51.00, 0, 'approved', '滨江道', '2026-11-06 00:00:00');
-INSERT INTO `post` VALUES (45, '舒芙蕾松饼，现烤要等十五分', '甜品时间', 16, 'admin', 40, '🥞', NULL, '端上来还在颤，切开像云朵。枫糖和奶油给得足，趁热吃，幸福感爆棚。', 4.3, 6, 86, 93, 44, 28.00, 0, 'approved', '老城区', '2026-11-08 00:00:00');
+INSERT INTO `post` VALUES (45, '舒芙蕾松饼，现烤要等十五分', '甜品时间', 16, 'admin', 40, '🥞', NULL, '端上来还在颤，切开像云朵。枫糖和奶油给得足，趁热吃，幸福感爆棚。', 4.3, 6, 1, 94, 44, 28.00, 0, 'approved', '老城区', '2026-11-08 00:00:00');
 INSERT INTO `post` VALUES (46, '抹茶千层，茶味浓到微苦', '甜品时间', 16, 'test', 41, '🍰', NULL, '可丽饼皮薄如纸，奶油里混了真抹茶。微苦压住甜，一口一层，越吃越上头。', 3.9, 0, 29, 42, 61, 20.00, 0, 'approved', '大学城', '2026-11-10 00:00:00');
 INSERT INTO `post` VALUES (47, '提拉米苏，酒香藏在手指饼里', '甜品时间', 16, '哈哈哈', 42, '🍮', NULL, '马斯卡彭顺滑，可可粉不苦。手指饼浸了咖啡酒，挖一勺，层次慢慢化开。', 4.6, 3, 42, 79, 78, 31.00, 0, 'approved', '万象城', '2026-11-12 00:00:00');
 INSERT INTO `post` VALUES (48, '芒果班戟，皮薄馅大', '甜品时间', 16, 'test', 37, '🥧', NULL, '班戟皮软糯，包着整块芒果和淡奶油。咬下去果肉爆汁，甜而不腻，夏天必点。', 4.2, 6, 55, 28, 10, 23.00, 0, 'approved', '三里屯', '2026-11-14 00:00:00');
@@ -355,7 +358,7 @@ INSERT INTO `post` VALUES (55, '烤鸡腿肉沙拉，腿肉比胸肉更香', '�
 INSERT INTO `post` VALUES (56, '白桃乌龙冷萃，茶咖融合，香得高级', '咖啡馆', 17, '哈哈哈', 45, '🧋', NULL, '乌龙冷泡加白桃，再混一点冷萃，果香回甘。周末人多，最好提前打个电话。', 4.4, 10, 62, 60, 82, 32.00, 0, 'approved', '滨江道', '2026-04-24 16:26:34');
 INSERT INTO `post` VALUES (57, '手卷寿司，海苔脆，现卷现吃', '日料局', 15, 'admin', 34, '🍱', NULL, '海苔裹醋饭和蟹柳或鳗鱼，一口塞进嘴里。分量扎实，两个人点一份也够。', 4.7, 1, 47, 97, 53, 32.00, 0, 'approved', '万象城', '2026-07-16 16:26:34');
 INSERT INTO `post` VALUES (58, '烤鸡爪，卤过再烤，胶质满满', '烧烤夜宵', 12, 'test', 17, '🍆', NULL, '鸡爪先卤后烤，皮糯骨酥，辣味渗进关节。分量扎实，两个人点一份也够。', 4.3, 1, 88, 46, 36, 30.00, 0, 'approved', '五道口', '2026-08-10 16:26:34');
-INSERT INTO `post` VALUES (59, '兰州牛肉面，一清二白三红四绿', '面食控', 10, '哈哈哈', 6, '🍜', NULL, '汤头清亮，萝卜白净，辣油红亮，香菜蒜苗翠绿。面条选了二细，筋道有嚼劲。周末人多，最好提前打个电话。', 4.8, 7, 93, 83, 25, 26.00, 0, 'approved', '老城区', '2026-09-27 16:26:34');
+INSERT INTO `post` VALUES (59, '兰州牛肉面，一清二白三红四绿', '面食控', 10, '哈哈哈', 6, '🍜', NULL, '汤头清亮，萝卜白净，辣油红亮，香菜蒜苗翠绿。面条选了二细，筋道有嚼劲。周末人多，最好提前打个电话。', 5.0, 1, 93, 83, 25, 26.00, 0, 'approved', '老城区', '2026-09-27 16:26:34');
 INSERT INTO `post` VALUES (60, '杏仁摩卡，巧克力加坚果香', '咖啡馆', 17, 'admin', 43, '🧋', NULL, '可可酱挂杯，浓缩加牛奶，撒杏仁碎。老板人很客气，会主动问口味轻重。', 4.6, 7, 20, 32, 38, 32.00, 0, 'approved', '三里屯', '2026-07-21 16:26:34');
 INSERT INTO `post` VALUES (61, '香辣鸡腿堡，辣味够冲，面包软', '汉堡炸鸡', 14, 'test', 26, '🍟', NULL, '鸡腿肉腌制入味炸到酥脆，生菜多，辣酱偏中式。分量扎实，两个人点一份也够。', 4.6, 11, 81, 69, 83, 26.00, 0, 'approved', '南锣鼓巷', '2026-10-13 16:26:34');
 INSERT INTO `post` VALUES (62, '味增拉面，汤头浓，笋干脆', '日料局', 15, '哈哈哈', 33, '🍤', NULL, '白味增汤底微甜，叉烧软烂，溏心蛋一戳就流。分量扎实，两个人点一份也够。', 4.5, 9, 38, 18, 85, 48.00, 0, 'approved', '大学城', '2026-10-18 16:26:34');
@@ -379,7 +382,7 @@ INSERT INTO `post` VALUES (79, '新疆拉条子，过油肉拌面，大盘装', 
 INSERT INTO `post` VALUES (80, '烤鱼豆腐，外皮起泡，里面嫩', '烧烤夜宵', 12, 'admin', 15, '🍆', NULL, '鱼豆腐烤到鼓胀，撒辣椒面和孜然，蘸干碟。环境干净，出餐速度还行。', 4.3, 4, 55, 68, 56, 22.00, 0, 'approved', '万象城', '2026-09-25 16:26:34');
 INSERT INTO `post` VALUES (81, '跷脚牛肉锅，汤鲜肉嫩，配干碟', '火锅江湖', 11, 'test', 10, '🌶️', NULL, '牛骨药材汤清鲜，牛杂软糯，蘸辣椒面干碟香辣。店不大，饭点要等位，建议早点去。', 4.5, 1, 37, 17, 79, 88.00, 0, 'approved', '五道口', '2026-09-01 16:26:34');
 INSERT INTO `post` VALUES (82, '芋泥啵啵奶茶，芋泥沉底，吸管能挖', '甜品时间', 16, '哈哈哈', 41, '🍨', NULL, '芋泥绵密带颗粒，鲜奶打底，啵啵弹牙。性价比不错，人均不贵，适合日常。', 3.8, 11, 90, 54, 17, 22.00, 0, 'approved', '老城区', '2026-09-21 16:26:34');
-INSERT INTO `post` VALUES (83, '气泡水美式，清爽解腻', '咖啡馆', 17, 'admin', 48, '🧋', NULL, '汤力水加浓缩，气泡带出柑橘感，夏天首选。性价比不错，人均不贵，适合日常。', 4.0, 12, 69, 91, 15, 28.00, 0, 'approved', '三里屯', '2026-10-25 16:26:34');
+INSERT INTO `post` VALUES (83, '气泡水美式，清爽解腻', '咖啡馆', 17, 'admin', 48, '🧋', NULL, '汤力水加浓缩，气泡带出柑橘感，夏天首选。性价比不错，人均不贵，适合日常。', 4.0, 12, 1, 92, 15, 28.00, 0, 'approved', '三里屯', '2026-10-25 16:26:34');
 INSERT INTO `post` VALUES (84, '麻辣香锅，干香不腻，自选食材', '火锅江湖', 11, 'test', 7, '🌶️', NULL, '藕片、虾滑、午餐肉、花菜炒香锅底料，干辣带麻，配米饭。分量扎实，两个人点一份也够。', 4.9, 12, 82, 40, 55, 68.00, 0, 'approved', '南锣鼓巷', '2026-10-15 16:26:34');
 INSERT INTO `post` VALUES (85, '蛋挞，酥皮一层一层', '甜品时间', 16, '哈哈哈', 38, '🥧', NULL, '挞皮起酥明显，蛋液微颤，烤到表面有焦斑最好。老板人很客气，会主动问口味轻重。', 4.6, 1, 48, 77, 17, 12.00, 0, 'approved', '大学城', '2026-10-27 16:26:34');
 INSERT INTO `post` VALUES (86, '日式炸猪排，面衣酥，肉厚', '日料局', 15, 'admin', 33, '🍤', NULL, '猪里脊裹粗面包糠炸到金黄，配卷心菜丝和猪排酱。周末人多，最好提前打个电话。', 4.8, 1, 29, 26, 52, 56.00, 0, 'approved', '科技园', '2026-08-26 16:26:34');
@@ -441,7 +444,7 @@ INSERT INTO `post` VALUES (141, '毛血旺，红油里全是料', '火锅江湖'
 INSERT INTO `post` VALUES (142, '麻辣烫，自选食材，麻酱多加', '烧烤夜宵', 12, 'test', 17, '🍢', NULL, '骨汤煮菜，麻酱、蒜水、辣油自己调，便宜管饱。老板人很客气，会主动问口味轻重。', 4.3, 10, 71, 74, 39, 26.00, 1, 'approved', '万象城', '2026-05-10 16:26:34');
 INSERT INTO `post` VALUES (143, '柠檬气泡冰咖，酸甜清爽', '咖啡馆', 17, '哈哈哈', 48, '🧋', NULL, '柠檬片加冰块，浓缩淋在最上层，渐层好看。周末人多，最好提前打个电话。', 3.9, 9, 27, 23, 24, 26.00, 0, 'approved', '五道口', '2026-06-28 16:26:34');
 INSERT INTO `post` VALUES (144, '抹茶千层，二十层薄饼叠成', '甜品时间', 16, 'admin', 37, '🍰', NULL, '抹茶奶油微苦，薄饼柔软，切开发出沙沙声。周末人多，最好提前打个电话。', 4.3, 6, 65, 60, 81, 42.00, 0, 'approved', '老城区', '2026-11-02 16:26:34');
-INSERT INTO `post` VALUES (145, '烤玉米，黄油抹匀，粒粒爆汁', '烧烤夜宵', 12, 'test', 14, '🍂', NULL, '甜玉米刷黄油烤，撒一点海盐，甜香。老板人很客气，会主动问口味轻重。', 4.2, 5, 80, 97, 69, 15.00, 0, 'approved', '三里屯', '2026-10-05 16:26:34');
+INSERT INTO `post` VALUES (145, '烤玉米，黄油抹匀，粒粒爆汁', '烧烤夜宵', 12, 'test', 14, '🍂', NULL, '甜玉米刷黄油烤，撒一点海盐，甜香。老板人很客气，会主动问口味轻重。', 4.2, 5, 1, 98, 69, 15.00, 0, 'approved', '三里屯', '2026-10-05 16:26:34');
 INSERT INTO `post` VALUES (146, '双层芝士牛肉堡，两手都握不住', '汉堡炸鸡', 14, '哈哈哈', 27, '🍔', NULL, '两片牛肉饼夹车达芝士，酸黄瓜和洋葱解腻，酱汁带烟熏味。老板人很客气，会主动问口味轻重。', 4.6, 10, 86, 46, 70, 42.00, 0, 'approved', '南锣鼓巷', '2026-09-26 16:26:34');
 INSERT INTO `post` VALUES (147, '老北京铜锅涮肉，手切羊肉配麻酱', '火锅江湖', 11, 'admin', 10, '🍲', NULL, '铜锅清汤，羊肉片薄，麻酱里加韭菜花和腐乳，一口下去暖。环境干净，出餐速度还行。', 4.5, 8, 24, 83, 78, 118.00, 0, 'approved', '大学城', '2026-09-29 16:26:34');
 INSERT INTO `post` VALUES (148, '烤青花鱼，皮脆肉嫩，柠檬提味', '日料局', 15, 'test', 35, '🍤', NULL, '青花鱼撒盐烤，油脂香，挤柠檬汁解腻。店不大，饭点要等位，建议早点去。', 3.9, 0, 36, 32, 32, 52.00, 0, 'approved', '科技园', '2026-09-03 16:26:34');
@@ -455,7 +458,7 @@ INSERT INTO `post` VALUES (155, '冰美式，醒脑，不加糖', '咖啡馆', 1
 INSERT INTO `post` VALUES (156, '鳗鱼饭，酱汁焦糖香', '日料局', 15, 'admin', 31, '🍱', NULL, '鳗鱼烤到皮脆，刷三次酱汁，铺在热饭上，甜咸下饭。环境干净，出餐速度还行。', 4.1, 8, 29, 64, 65, 78.00, 0, 'approved', '科技园', '2026-08-06 16:26:34');
 INSERT INTO `post` VALUES (157, '藜麦鸡丝碗，主食换成藜麦，无负担', '轻食沙拉', 13, 'test', 20, '🥙', NULL, '藜麦弹牙，鸡丝细嫩，配紫甘蓝和胡萝卜丝。环境干净，出餐速度还行。', 4.2, 4, 88, 13, 54, 38.00, 0, 'approved', '滨江道', '2026-10-15 16:26:34');
 INSERT INTO `post` VALUES (158, '卡布奇诺，奶泡厚，撒可可粉', '咖啡馆', 17, '哈哈哈', 45, '🥤', NULL, '奶泡占三分之一，入口绵密，咖啡香在最后。周末人多，最好提前打个电话。', 4.3, 3, 32, 50, 40, 28.00, 0, 'approved', '万象城', '2026-08-11 16:26:34');
-INSERT INTO `post` VALUES (159, '潮汕粿条汤，汤清味鲜，粿条滑溜', '面食控', 10, 'test', 4, '🍝', NULL, '猪骨汤底清透，粿条软滑，配牛肉丸、猪杂和炸蒜蓉，暖胃。店不大，饭点要等位，建议早点去。', 4.2, 11, 74, 87, 45, 27.00, 0, 'approved', '老城区', '2026-05-23 16:26:34');
+INSERT INTO `post` VALUES (159, '潮汕粿条汤，汤清味鲜，粿条滑溜', '面食控', 10, 'test', 4, '🍝', NULL, '猪骨汤底清透，粿条软滑，配牛肉丸、猪杂和炸蒜蓉，暖胃。店不大，饭点要等位，建议早点去。', 5.0, 1, 74, 87, 45, 27.00, 0, 'approved', '老城区', '2026-05-23 16:26:34');
 INSERT INTO `post` VALUES (160, '牛油果虾仁碗，搭得好看，吃着饱', '轻食沙拉', 13, '哈哈哈', 23, '🥗', NULL, '牛油果绵密，虾仁弹，加藜麦和鹰嘴豆，一份能顶到晚饭。店不大，饭点要等位，建议早点去。', 4.8, 11, 33, 36, 57, 42.00, 0, 'approved', '三里屯', '2026-05-23 16:26:34');
 INSERT INTO `post` VALUES (161, '波奇饭，夏威夷风，色彩满分', '轻食沙拉', 13, 'admin', 24, '🥙', NULL, '三文鱼丁、牛油果、毛豆、海苔铺在米饭上，淋酱油。环境干净，出餐速度还行。', 4.0, 10, 87, 73, 9, 46.00, 0, 'approved', '南锣鼓巷', '2026-10-06 16:26:34');
 INSERT INTO `post` VALUES (162, '可可碎片冰沙，巧克力味浓', '咖啡馆', 17, 'test', 43, '🥤', NULL, '可可粉加牛奶打成冰沙，加巧克力碎，冰爽。环境干净，出餐速度还行。', 4.2, 4, 26, 22, 15, 30.00, 0, 'approved', '大学城', '2026-10-30 16:26:34');
@@ -467,7 +470,7 @@ INSERT INTO `post` VALUES (167, '鸡胸肉沙拉，低脂高蛋白，酱汁另�
 INSERT INTO `post` VALUES (168, '日式咖喱饭，浓稠微甜，配炸猪排', '日料局', 15, '哈哈哈', 31, '🍤', NULL, '咖喱块熬到浓稠，加土豆胡萝卜，配一块炸猪排。老板人很客气，会主动问口味轻重。', 4.3, 11, 35, 68, 48, 46.00, 0, 'approved', '南锣鼓巷', '2026-06-06 16:26:34');
 INSERT INTO `post` VALUES (169, '贵阳肠旺面，红油配脆哨，够江湖', '面食控', 10, 'admin', 2, '🍝', NULL, '汤头红亮，血旺嫩、脆哨香，面条鸡蛋加碱，弹牙爽口。分量扎实，两个人点一份也够。', 3.8, 5, 37, 17, 12, 24.00, 0, 'approved', '大学城', '2026-10-17 16:26:34');
 INSERT INTO `post` VALUES (170, '烤五花肉，厚切带皮，脆到出声', '烧烤夜宵', 12, 'test', 15, '🍂', NULL, '带皮五花烤到金黄，肥肉透明不腻，包生菜蘸酱。性价比不错，人均不贵，适合日常。', 4.8, 11, 20, 54, 77, 48.00, 0, 'approved', '科技园', '2026-04-29 16:26:34');
-INSERT INTO `post` VALUES (171, '豆腐蔬菜煲，素食者也能吃饱', '轻食沙拉', 13, '哈哈哈', 22, '🥗', NULL, '嫩豆腐配香菇、娃娃菜和豆皮，清汤煮，鲜甜。周末人多，最好提前打个电话。', 4.1, 3, 80, 91, 34, 30.00, 0, 'approved', '滨江道', '2026-06-03 16:26:34');
+INSERT INTO `post` VALUES (171, '豆腐蔬菜煲，素食者也能吃饱', '轻食沙拉', 13, '哈哈哈', 22, '🥗', NULL, '嫩豆腐配香菇、娃娃菜和豆皮，清汤煮，鲜甜。周末人多，最好提前打个电话。', 5.0, 1, 80, 91, 34, 30.00, 0, 'approved', '滨江道', '2026-06-03 16:26:34');
 INSERT INTO `post` VALUES (172, '金枪鱼玉米沙拉，罐头金枪鱼也香', '轻食沙拉', 13, 'admin', 23, '🥑', NULL, '金枪鱼拌沙拉酱，玉米粒甜，夹在生菜里吃。环境干净，出餐速度还行。', 4.7, 12, 12, 40, 34, 30.00, 0, 'approved', '万象城', '2026-05-12 16:26:34');
 INSERT INTO `post` VALUES (173, '薯格，边角酥脆，孩子最爱', '汉堡炸鸡', 14, 'test', 30, '🍗', NULL, '土豆切格状炸，面积大更脆，撒海苔盐。性价比不错，人均不贵，适合日常。', 4.5, 8, 57, 77, 61, 16.00, 0, 'approved', '五道口', '2026-06-07 16:26:34');
 INSERT INTO `post` VALUES (174, '生椰拿铁，椰香配咖啡，很上头', '咖啡馆', 17, '哈哈哈', 43, '☕', NULL, '生椰乳浓稠，甜度可调，冰饮最爽。周末人多，最好提前打个电话。', 4.7, 9, 19, 26, 17, 28.00, 0, 'approved', '老城区', '2026-08-16 16:26:34');
@@ -498,6 +501,7 @@ INSERT INTO `post` VALUES (198, '潮汕蚝烙，边缘焦脆', '烧烤夜宵', 1
 INSERT INTO `post` VALUES (199, '抹茶生巧塔', '甜品时间', 16, 'test', 38, '🍫', NULL, '塔皮酥，抹茶生巧微苦回甘，冷藏后切面整齐，配无糖茶刚好。', 4.7, 5, 58, 71, 44, 36.00, 0, 'approved', '三里屯', '2026-10-30 16:26:47');
 INSERT INTO `post` VALUES (200, '花生汤配油条', '甜品时间', 16, 'admin', 39, '🥣', NULL, '花生煮到软糯起沙，汤色乳白微甜，油条现炸蘸着吃，早餐常见。', 4.1, 1, 26, 20, 31, 15.00, 0, 'approved', '老城区', '2026-08-07 16:26:47');
 INSERT INTO `post` VALUES (201, '哈哈哈', '面食控', 10, '哈哈哈', 49, '🍜', NULL, '非常好吃', 4.5, 0, 0, 0, 0, NULL, 0, 'rejected', NULL, '2026-11-18 09:44:19');
+INSERT INTO `post` VALUES (202, '美味', '面食控', 10, '哈哈哈', 49, '🍜', NULL, '特别好吃', 4.5, 0, 0, 0, 0, NULL, 0, 'pending', NULL, '2026-11-27 16:03:33');
 
 -- ----------------------------
 -- Table structure for post_like
@@ -511,7 +515,7 @@ CREATE TABLE `post_like`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_user_post`(`user_id` ASC, `post_id` ASC) USING BTREE,
   INDEX `idx_post`(`post_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '绗旇?鐐硅禐琛' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '绗旇?鐐硅禐琛' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of post_like
@@ -519,6 +523,9 @@ CREATE TABLE `post_like`  (
 INSERT INTO `post_like` VALUES (3, 4, 1, '2026-11-18 09:48:13');
 INSERT INTO `post_like` VALUES (5, 8, 33, '2026-11-23 11:29:46');
 INSERT INTO `post_like` VALUES (6, 8, 38, '2026-11-23 11:29:49');
+INSERT INTO `post_like` VALUES (7, 8, 45, '2026-11-27 16:02:12');
+INSERT INTO `post_like` VALUES (8, 8, 145, '2026-11-27 16:02:14');
+INSERT INTO `post_like` VALUES (9, 8, 83, '2026-11-27 16:02:16');
 
 -- ----------------------------
 -- Table structure for review
@@ -533,7 +540,7 @@ CREATE TABLE `review`  (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '点评时间',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_post`(`post_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '美食点评表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 12 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '美食点评表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of review
@@ -543,6 +550,42 @@ INSERT INTO `review` VALUES (2, 1, 'admin', 5, '牛肉份量足，性价比高�
 INSERT INTO `review` VALUES (3, 2, 'admin', 4, '红油很香，抄手皮薄，下次试试干拌。', '2026-10-31 20:00:00');
 INSERT INTO `review` VALUES (4, 3, 'test', 5, '毛肚真的脆，锅底够味！', '2026-10-30 21:10:00');
 INSERT INTO `review` VALUES (8, 198, '哈哈哈', 5, '是真的好吃', '2026-11-23 11:40:06');
+INSERT INTO `review` VALUES (9, 59, '哈哈哈', 5, '好吃', '2026-11-27 16:02:38');
+INSERT INTO `review` VALUES (10, 159, '哈哈哈', 5, '火车', '2026-11-27 16:02:49');
+INSERT INTO `review` VALUES (11, 171, '哈哈哈', 5, '哇塞', '2026-11-27 16:03:08');
+
+-- ----------------------------
+-- Table structure for reward
+-- ----------------------------
+DROP TABLE IF EXISTS `reward`;
+CREATE TABLE `reward`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '好礼ID',
+  `code` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '好礼编码（前端 id）',
+  `name` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '好礼名称',
+  `category` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '分类：配送/满减/饮品/甜品/惊喜/特权/现金/周边',
+  `cost` int NOT NULL COMMENT '所需积分',
+  `emoji` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '展示图标',
+  `description` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '好礼说明',
+  `stock` int NOT NULL DEFAULT 999 COMMENT '库存，-1 表示不限量',
+  `status` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'active' COMMENT '状态：active=可兑换',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_reward_code`(`code` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '积分好礼目录' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of reward
+-- ----------------------------
+INSERT INTO `reward` VALUES (1, 'delivery', '免配送费券', '配送', 40, '🛵', '下一单免配送费，懒人必备', 998, 'active', '2026-11-27 16:04:34');
+INSERT INTO `reward` VALUES (2, 'c5', '满 30 减 5 优惠券', '满减', 50, '🎟️', '点单立减，攒够就能兑', 998, 'active', '2026-11-27 16:04:34');
+INSERT INTO `reward` VALUES (3, 'drink', '饮品升杯券', '饮品', 70, '🥤', '奶茶咖啡免费升大杯', 999, 'active', '2026-11-27 16:04:34');
+INSERT INTO `reward` VALUES (4, 'c12', '满 60 减 12 优惠券', '满减', 90, '🎫', '聚餐更划算的万能券', 999, 'active', '2026-11-27 16:04:34');
+INSERT INTO `reward` VALUES (5, 'dessert', '甜品 8 折券', '甜品', 120, '🍰', '甜品时间专区通用', 999, 'active', '2026-11-27 16:04:34');
+INSERT INTO `reward` VALUES (6, 'c25', '满 100 减 25 优惠券', '满减', 150, '🧧', '大额满减，请客首选', 999, 'active', '2026-11-27 16:04:34');
+INSERT INTO `reward` VALUES (7, 'blind', '美食盲盒', '惊喜', 180, '🎁', '随机掉落隐藏款好礼', 999, 'active', '2026-11-27 16:04:34');
+INSERT INTO `reward` VALUES (8, 'vip', '吃货月卡', '特权', 200, '👑', '专属身份标识，月月有效', 999, 'active', '2026-11-27 16:04:34');
+INSERT INTO `reward` VALUES (9, 'fund', '探店基金 20 元', '现金', 260, '💰', '下次探店直接抵扣', 999, 'active', '2026-11-27 16:04:34');
+INSERT INTO `reward` VALUES (10, 'merch', '社区定制帆布袋', '周边', 300, '🛍️', '限量周边，背着去觅食', 20, 'active', '2026-11-27 16:04:34');
 
 -- ----------------------------
 -- Table structure for shop
@@ -654,6 +697,7 @@ CREATE TABLE `user`  (
   `password_hash` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '密码哈希(BCrypt)',
   `role` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'user' COMMENT '角色：user=普通用户 admin=管理员',
   `perm` tinyint NOT NULL DEFAULT 1 COMMENT '权限：1=默认用户，0=管理员（0才能看到并登录后台管理）',
+  `points` int NOT NULL DEFAULT 120 COMMENT '吃货积分',
   `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'active' COMMENT '账号状态：active=正常 disabled=禁用',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
   PRIMARY KEY (`id`) USING BTREE,
@@ -663,59 +707,84 @@ CREATE TABLE `user`  (
 -- ----------------------------
 -- Records of user
 -- ----------------------------
-INSERT INTO `user` VALUES (4, 'admin', '$2a$10$bw2vRfpxf7FPSKoI977KPO4vMRDDHcO/G6OOLxECqQF2yFt4b36se', 'admin', 0, 'active', '2026-11-02 10:49:08');
-INSERT INTO `user` VALUES (5, 'test', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-02 10:49:08');
-INSERT INTO `user` VALUES (8, '哈哈哈', '$2a$10$Hc76SRxcm/xCAyFCkIUelO1x.JkWAaxqpPb3v7O.jz0w9mMUSUn0u', 'user', 0, 'active', '2026-11-02 11:01:13');
-INSERT INTO `user` VALUES (9, 'shop01', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (10, 'shop02', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (11, 'shop03', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (12, 'shop04', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (13, 'shop05', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (14, 'shop06', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (15, 'shop07', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (16, 'shop08', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (17, 'shop09', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (18, 'shop10', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (19, 'shop11', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (20, 'shop12', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (21, 'shop13', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (22, 'shop14', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (23, 'shop15', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (24, 'shop16', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (25, 'shop17', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (26, 'shop18', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (27, 'shop19', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (28, 'shop20', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (29, 'shop21', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (30, 'shop22', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (31, 'shop23', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (32, 'shop24', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (33, 'shop25', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (34, 'shop26', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (35, 'shop27', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (36, 'shop28', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (37, 'shop29', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (38, 'shop30', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (39, 'shop31', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (40, 'shop32', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (41, 'shop33', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (42, 'shop34', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (43, 'shop35', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (44, 'shop36', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (45, 'shop37', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (46, 'shop38', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (47, 'shop39', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (48, 'shop40', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (49, 'shop41', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (50, 'shop42', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (51, 'shop43', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (52, 'shop44', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (53, 'shop45', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (54, 'shop46', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (55, 'shop47', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (56, 'shop48', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 'active', '2026-11-06 16:34:57');
-INSERT INTO `user` VALUES (57, 'wwww', '$2a$10$QQQR7euJBQowk45F9QoIPerg3IqwSdmRcCfK6HbodvUgZl.1mnpRK', 'user', 1, 'active', '2026-11-16 10:55:19');
-INSERT INTO `user` VALUES (58, 'zzz', '11111111', 'user', 1, 'active', '2026-11-20 16:23:51');
-INSERT INTO `user` VALUES (59, 'wergc', '12345678', 'user', 1, 'active', '2026-11-20 16:37:54');
+INSERT INTO `user` VALUES (4, 'admin', '$2a$10$bw2vRfpxf7FPSKoI977KPO4vMRDDHcO/G6OOLxECqQF2yFt4b36se', 'admin', 0, 120, 'active', '2026-11-02 10:49:08');
+INSERT INTO `user` VALUES (5, 'test', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-02 10:49:08');
+INSERT INTO `user` VALUES (8, '哈哈哈', '$2a$10$Hc76SRxcm/xCAyFCkIUelO1x.JkWAaxqpPb3v7O.jz0w9mMUSUn0u', 'user', 0, 120, 'active', '2026-11-02 11:01:13');
+INSERT INTO `user` VALUES (9, 'shop01', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (10, 'shop02', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (11, 'shop03', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (12, 'shop04', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (13, 'shop05', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (14, 'shop06', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (15, 'shop07', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (16, 'shop08', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (17, 'shop09', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (18, 'shop10', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (19, 'shop11', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (20, 'shop12', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (21, 'shop13', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (22, 'shop14', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (23, 'shop15', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (24, 'shop16', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (25, 'shop17', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (26, 'shop18', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (27, 'shop19', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (28, 'shop20', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (29, 'shop21', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (30, 'shop22', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (31, 'shop23', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (32, 'shop24', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (33, 'shop25', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (34, 'shop26', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (35, 'shop27', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (36, 'shop28', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (37, 'shop29', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (38, 'shop30', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (39, 'shop31', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (40, 'shop32', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (41, 'shop33', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (42, 'shop34', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (43, 'shop35', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (44, 'shop36', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (45, 'shop37', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (46, 'shop38', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (47, 'shop39', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (48, 'shop40', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (49, 'shop41', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (50, 'shop42', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (51, 'shop43', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (52, 'shop44', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (53, 'shop45', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (54, 'shop46', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (55, 'shop47', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (56, 'shop48', '$2a$10$Ssk/7juLfC0d4eJUh1gaiuUDp.OhTpmpE2WHi5xvm9SnsNJoskG0m', 'user', 1, 120, 'active', '2026-11-06 16:34:57');
+INSERT INTO `user` VALUES (57, 'wwww', '$2a$10$QQQR7euJBQowk45F9QoIPerg3IqwSdmRcCfK6HbodvUgZl.1mnpRK', 'user', 1, 120, 'active', '2026-11-16 10:55:19');
+INSERT INTO `user` VALUES (58, 'zzz', '11111111', 'user', 1, 120, 'active', '2026-11-20 16:23:51');
+INSERT INTO `user` VALUES (59, 'wergc', '12345678', 'user', 1, 120, 'active', '2026-11-20 16:37:54');
+
+-- ----------------------------
+-- Table structure for user_reward
+-- ----------------------------
+DROP TABLE IF EXISTS `user_reward`;
+CREATE TABLE `user_reward`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '兑换记录ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `reward_id` bigint NOT NULL COMMENT '好礼ID',
+  `reward_code` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '好礼编码',
+  `name` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '好礼名称',
+  `category` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '好礼分类快照',
+  `emoji` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '展示图标',
+  `description` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '好礼说明快照',
+  `cost` int NOT NULL COMMENT '兑换消耗积分',
+  `exchange_code` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '兑换码',
+  `exchanged_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '兑换时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_exchange_code`(`exchange_code` ASC) USING BTREE,
+  INDEX `idx_user_reward_user`(`user_id` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户兑换记录' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of user_reward
+-- ----------------------------
 
 SET FOREIGN_KEY_CHECKS = 1;

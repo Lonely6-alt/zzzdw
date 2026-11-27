@@ -68,7 +68,7 @@ public class AuthController {
         user.setCreatedAt(LocalDateTime.now());
         userService.save(user);
 
-        return new AuthVO(jwtUtil.createToken(username), new UserVO(user.getId(), username, "user", 1));
+        return new AuthVO(jwtUtil.createToken(username), new UserVO(user.getId(), username, "user", 1, user.getPoints()));
     }
 
     /** 登录：先校验验证码，再按用户名查询并校验密码（明文直比，兼容历史 bcrypt 数据） */

@@ -30,6 +30,9 @@ public class User {
     /** 权限：1=默认用户（看不到后台按钮、进不了后台），0=管理员（可用后台管理） */
     private Integer perm;
 
+    /** 吃货积分：积分好礼兑换的扣减来源 */
+    private Integer points;
+
     /** 是否管理员权限（perm=0 视为管理员） */
     public boolean isAdminPerm() {
         return perm != null && perm == 0;

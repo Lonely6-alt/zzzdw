@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { authUser, authPerm, ensureSession, logout } from './composables/useAuth.js'
 import { isAdmin } from './composables/useAdminAuth.js'
 import { useToast } from './composables/useToast.js'
+import { initFromBackend as initGrowth } from './composables/useGrowth.js'
 import ToastHost from './components/ToastHost.vue'
 import OrderModal from './components/OrderModal.vue'
 
@@ -46,6 +47,7 @@ onMounted(async () => {
   onScroll()
   const ok = await ensureSession()
   if (!ok && route.meta?.requiresAuth) router.push('/login')
+  if (ok) initGrowth()
   startUnreadPoll()
 })
 onUnmounted(() => {

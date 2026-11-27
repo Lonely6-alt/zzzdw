@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { authUser } from '../composables/useAuth.js'
 import { useFavorites } from '../composables/useFavorites.js'
-import { useGrowth, LEVELS, WEEKLY_TASKS, COUPON_SHOP, BADGES } from '../composables/useGrowth.js'
+import { useGrowth, LEVELS, WEEKLY_TASKS, BADGES } from '../composables/useGrowth.js'
 
 const router = useRouter()
 const posts = ref([])
@@ -56,7 +56,6 @@ function fmtUnlockTime(ts) {
 
 /* ---------------- 成长体系 ---------------- */
 const couponList = computed(() => Object.entries(growth.coupons.value).map(([k, c]) => ({ ...c, key: k })).reverse())
-const showCouponShop = ref(false)
 function pct(cur, target) { return Math.min(100, Math.round((cur / target) * 100)) }
 
 onMounted(load)
@@ -147,30 +146,29 @@ onMounted(load)
         </ul>
       </div>
 
-      <!-- 积分兑换优惠券 -->
+      <!-- 积分商城：奖品直接展示，不再需要点「去兑换」 -->
       <div class="g-card">
         <div class="g-head">
-          <h3>🎟️ 积分商城</h3>
-          <button class="mini-btn" type="button" @click="showCouponShop = !showCouponShop">
-            {{ showCouponShop ? '收起' : '去兑换' }}
-          </button>
+          <h3>🎁 积分好礼</h3>
+          <span class="g-sub">兑完自动收入囊中</span>
         </div>
-        <p class="g-sub">已拥有 {{ growth.couponCount.value }} 张优惠券</p>
-        <div v-if="showCouponShop" class="coupon-shop">
-          <div v-for="c in COUPON_SHOP" :key="c.id" class="coupon" :class="{ lack: growth.points.value < c.cost }">
+        <p class="g-sub">已拥有 {{ growth.couponCount.value }} 件好礼 · 积够就能兑</p>
+        <div class="reward-shop">
+          <div v-for="c in growth.rewards.value" :key="c.id" class="reward" :class="{ lack: growth.points.value < c.cost }">
             <span class="c-emoji">{{ c.emoji }}</span>
             <div class="c-info">
               <b>{{ c.name }}</b>
-              <i>积分足够即可兑换，兑换码下方可见</i>
+              <span class="c-tag">{{ c.tag }}</span>
+              <i>{{ c.desc }}</i>
             </div>
             <button class="c-buy" type="button" :disabled="growth.points.value < c.cost" @click="growth.exchange(c.id)">
-              {{ c.cost }} 分兑换
+              {{ growth.points.value >= c.cost ? `${c.cost} 分兑换` : `还差 ${c.cost - growth.points.value} 分` }}
             </button>
           </div>
         </div>
         <div v-if="couponList.length" class="my-coupons">
           <span v-for="c in couponList" :key="c.key" class="my-coupon">
-            🎫 {{ c.name }} · 码 {{ c.code }}
+            🎁 {{ c.name }} · 码 {{ c.code }}
           </span>
         </div>
       </div>
@@ -310,22 +308,24 @@ onMounted(load)
 .task.done .t-claim:not(.claimed):not(:disabled){ animation:pulse 1.2s infinite; }
 @keyframes pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,90,60,.35); } 50%{ box-shadow:0 0 0 6px rgba(255,90,60,0); } }
 
-.mini-btn{ border:1.5px solid #ffd9bf; background:#fff3e9; color:var(--tomato); font-size:12px; font-weight:800;
-  padding:4px 12px; border-radius:999px; cursor:pointer; font-family:inherit; }
-.mini-btn:hover{ background:#ffe9d8; }
-.coupon-shop{ display:flex; flex-direction:column; gap:9px; margin-top:10px; }
-.coupon{ display:flex; align-items:center; gap:10px; border:1.5px dashed #ffd9b0; background:#fffaf5;
-  border-radius:13px; padding:9px 12px; }
-.coupon.lack{ opacity:.55; }
-.c-emoji{ font-size:22px; }
+.reward-shop{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; margin-top:10px;
+  max-height:286px; overflow-y:auto; padding-right:4px; }
+.reward{ display:flex; align-items:center; gap:9px; border:1.5px dashed #ffd9b0; background:#fffaf5;
+  border-radius:13px; padding:9px 10px; min-width:0; }
+.reward.lack{ opacity:.62; }
+.c-emoji{ font-size:22px; flex-shrink:0; }
 .c-info{ flex:1; min-width:0; }
 .c-info b{ display:block; font-size:12.5px; color:var(--ink); }
-.c-info i{ font-style:normal; font-size:10.5px; color:var(--muted); }
-.c-buy{ flex-shrink:0; border:0; border-radius:999px; padding:6px 12px; font-size:11.5px; font-weight:800;
-  color:#fff; background:linear-gradient(120deg,var(--orange),var(--tomato)); cursor:pointer; font-family:inherit; }
-.c-buy:disabled{ opacity:.5; cursor:not-allowed; }
+.c-tag{ display:inline-block; font-size:10px; font-weight:800; color:#b56a1f; background:#ffeddb;
+  border-radius:999px; padding:1px 7px; margin:2px 0 3px; }
+.c-info i{ display:block; font-style:normal; font-size:10.5px; color:var(--muted); line-height:1.3; }
+.c-buy{ flex-shrink:0; border:0; border-radius:999px; padding:6px 10px; font-size:11px; font-weight:800;
+  color:#fff; background:linear-gradient(120deg,var(--orange),var(--tomato)); cursor:pointer; font-family:inherit;
+  white-space:nowrap; }
+.c-buy:disabled{ opacity:.55; cursor:not-allowed; background:#d9c8b8; }
 .my-coupons{ display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; }
 .my-coupon{ font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px; background:#e9f7ee; color:#1d7a3e; }
+@media (max-width:520px){ .reward-shop{ grid-template-columns:1fr; } }
 
 /* ===== 分段切换 ===== */
 .tabs{ position:relative; z-index:2; display:flex; gap:8px; margin:22px 0 18px; flex-wrap:wrap; }

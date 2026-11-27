@@ -1,5 +1,6 @@
 // 对接后端 API 的登录态管理；JWT 存浏览器 localStorage，authUser / authRole 为全局响应式状态
 import { ref } from 'vue'
+import { initFromBackend as initGrowth } from './useGrowth.js'
 
 const API = '/api'
 const TOKEN_KEY = 'food_token'
@@ -82,6 +83,7 @@ export async function login({ username, password }) {
   setUser(d.user.username)
   setRole(d.user.role)
   setPerm(d.user.perm)
+  initGrowth()
   return d
 }
 
@@ -91,6 +93,7 @@ export async function register(payload) {
   setUser(d.user.username)
   setRole(d.user.role)
   setPerm(d.user.perm)
+  initGrowth()
   return d
 }
 

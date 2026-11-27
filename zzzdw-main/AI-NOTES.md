@@ -85,3 +85,15 @@
   3. `[1.5]~[1.8]` 里对 `upgrade_v2/seed_users/seed_posts_200/upgrade_v3/seed_shop_chat` 的引用改为"文件存在才执行"，不再每次刷假 `[警告] 写入失败`（磁盘上确实只有 `food_db.sql`）。
   4. 等待后端时间 600s→180s，失败时直接列出三种常见原因。
   - 验证：一键启动全流程跑通（自检通过 → 5173 就绪 → 8081 就绪）；离线 `spring-boot:run` 2.9 秒完成、6 秒可访问；`/api/chat/unread`、`/api/chat/sessions`、`/api/friends`、`/api/me` 经代理全部 200。
+- 2026-11-27：积分好礼改为**后端为准**（原为纯 localStorage 演示）：
+  - 数据库：`user` 新增 `points`（默认 120）；新建 `reward`（10 种好礼目录）与 `user_reward`（兑换记录，含兑换码/分类/说明快照）。迁移脚本 `springBootTest/sql/growth_rewards.sql`；`food_db.sql` 已由 `mysqldump` 重新导出同步。
+  - 后端新增 `GrowthController` / `GrowthService`：
+    - `GET /api/growth/me`：当前积分 + 已兑好礼
+    - `POST /api/growth/points`：行为积分上报（`{delta,reason}`，单次上限 1000）
+    - `GET /api/rewards`：可兑换好礼目录
+    - `GET /api/rewards/mine`：已兑好礼
+    - `POST /api/rewards/exchange`：`{rewardId}`，事务内原子扣积分/扣库存/写兑换记录，积分不足返回 400
+  - `UserVO` 增加 `points` 字段；`/api/me` 也返回积分。
+  - 前端 `useGrowth.js` 改为先调后端同步积分/目录/已兑好礼；点赞/收藏/评价/发笔记/任务领取都上报 `/api/growth/points`；兑换走 `/api/rewards/exchange`。localStorage 仅作缓存与后端不可用时的兜底，不再作为积分真相源。
+  - 验证：后端离线 `mvnw.cmd -o -Dmaven.repo.local=C:/Users/Administrator/.m2/repository compile` 通过；前端 `npm run build` 通过；浏览器实测本地积分 999 被后端 110 覆盖、点击兑换后变 60 且已兑列表新增奖品，数据库 `user.points` 与 `user_reward` 同步落库；测试数据已清理，`test` 账号恢复 120 分。
+  - 注意：本机 `D:\workSpace\m2-repository` 再次不完整（缺 Spring Boot parent POM），本次编译临时使用 `C:\Users\Administrator\.m2\repository`；启动脚本若再遇到离线构建失败，按 2026-11-09 的自愈流程补齐 D 盘仓库。
